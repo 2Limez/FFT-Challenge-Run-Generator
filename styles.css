@@ -1,0 +1,197 @@
+/* ====== Global layout / FFT-style look ====== */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: radial-gradient(circle at top, #202848 0%, #070910 65%, #020308 100%);
+  color: #f4f8ff;
+  font-family: "Trebuchet MS", "Verdana", sans-serif;
+  height: 100%;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.screen {
+  width: 1100px;
+  max-width: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.top-bar {
+  background: linear-gradient(to bottom, #24355c, #151c33);
+  border: 2px solid #c0c8e0;
+  border-bottom: 0;
+  padding: 8px 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 0 12px rgba(0,0,0,0.8);
+}
+
+.top-bar span.label {
+  opacity: 0.7;
+}
+
+.top-bar span.value {
+  font-weight: bold;
+}
+
+.main-panel {
+  background: linear-gradient(to bottom, #182236, #070b14);
+  border: 2px solid #c0c8e0;
+  border-top: 0;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1.2fr 1.3fr;
+  gap: 12px;
+  box-shadow: 0 10px 22px rgba(0,0,0,0.9);
+}
+
+.left-column,
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panel {
+  background: linear-gradient(to bottom, #243350, #111826);
+  border: 2px solid #aeb6cf;
+  padding: 10px 12px;
+  position: relative;
+}
+
+.panel-title {
+  position: absolute;
+  top: -11px;
+  left: 10px;
+  padding: 0 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  background: #141a2b;
+  border-left: 1px solid #c0c8e0;
+  border-right: 1px solid #c0c8e0;
+}
+
+.panel-content {
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.panel-content label {
+  display: block;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+
+.panel-content select,
+.panel-content input[type="checkbox"],
+.panel-content input[type="radio"] {
+  margin-right: 4px;
+}
+
+.inline {
+  display: inline-block;
+  margin-right: 16px;
+}
+
+.hint {
+  font-size: 11px;
+  opacity: 0.75;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.buttons {
+  margin-top: 6px;
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  padding: 4px 10px;
+  border: 2px solid #c0c8e0;
+  background: linear-gradient(to bottom, #2f446f, #1c2741);
+  color: #f4f8ff;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(0,0,0,0.7);
+}
+
+.btn.secondary {
+  border-color: #8d96b4;
+  background: linear-gradient(to bottom, #323b59, #181d30);
+  opacity: 0.9;
+}
+
+.btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 2px rgba(0,0,0,0.9);
+}
+
+.results-panel {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.results-section-title {
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  border-bottom: 1px solid #8a93ad;
+  margin: 6px 0 4px;
+  padding-bottom: 1px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  margin: 2px 0;
+}
+
+.row .label {
+  opacity: 0.9;
+}
+
+.row .value {
+  font-weight: 600;
+}
+
+.job-list {
+  margin-left: 10px;
+  margin-top: 2px;
+}
+
+.job-list li {
+  list-style: square;
+  margin-left: 12px;
+}
+
+.small {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.footer-bar {
+  margin-top: 6px;
+  font-size: 11px;
+  text-align: right;
+  opacity: 0.75;
+}
+
+@media (max-width: 900px) {
+  .main-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
