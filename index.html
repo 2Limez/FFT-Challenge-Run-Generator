@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ivalice Challenge Run Generator</title>
+  <style>
+    /* ====== Global layout / FFT-style look ====== */
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at top, #202848 0%, #070910 65%, #020308 100%);
+      color: #f4f8ff;
+      font-family: "Trebuchet MS", "Verdana", sans-serif;
+      height: 100%;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .screen {
+      width: 1100px;
+      max-width: 100%;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+
+    .top-bar {
+      background: linear-gradient(to bottom, #24355c, #151c33);
+      border: 2px solid #c0c8e0;
+      border-bottom: 0;
+      padding: 8px 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 0 12px rgba(0,0,0,0.8);
+    }
+
+    .top-bar span.label {
+      opacity: 0.7;
+    }
+
+    .top-bar span.value {
+      font-weight: bold;
+    }
+
+    .main-panel {
+      background: linear-gradient(to bottom, #182236, #070b14);
+      border: 2px solid #c0c8e0;
+      border-top: 0;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 1.2fr 1.3fr;
+      gap: 12px;
+      box-shadow: 0 10px 22px rgba(0,0,0,0.9);
+    }
+
+    .left-column,
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .panel {
+      background: linear-gradient(to bottom, #243350, #111826);
+      border: 2px solid #aeb6cf;
+      padding: 10px 12px;
+      position: relative;
+    }
+
+    .panel-title {
+      position: absolute;
+      top: -11px;
+      left: 10px;
+      padding: 0 6px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      background: #141a2b;
+      border-left: 1px solid #c0c8e0;
+      border-right: 1px solid #c0c8e0;
+    }
+
+    .panel-content {
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .panel-content label {
+      display: block;
+      margin-bottom: 6px;
+      cursor: pointer;
+    }
+
+    .panel-content select,
+    .panel-content input[type="checkbox"],
+    .panel-content input[type="radio"] {
+      margin-right: 4px;
+    }
+
+    .inline {
+      display: inline-block;
+      margin-right: 16px;
+    }
+
+    .hint {
+      font-size: 11px;
+      opacity: 0.75;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    .buttons {
+      margin-top: 6px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 4px 10px;
+      border: 2px solid #c0c8e0;
+      background: linear-gradient(to bottom, #2f446f, #1c2741);
+      color: #f4f8ff;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      cursor: pointer;
+      box-shadow: 0 0 6px rgba(0,0,0,0.7);
+    }
+
+    .btn.secondary {
+      border-color: #8d96b4;
+      background: linear-gradient(to bottom, #323b59, #181d30);
+      opacity: 0.9;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+      box-shadow: 0 0 2px rgba(0,0,0,0.9);
+    }
+
+    .results-panel {
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .results-section-title {
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      border-bottom: 1px solid #8a93ad;
+      margin: 6px 0 4px;
+      padding-bottom: 1px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin: 2px 0;
+    }
+
+    .row .label {
+      opacity: 0.9;
+    }
+
+    .row .value {
+      font-weight: 600;
+    }
+
+    .job-list {
+      margin-left: 10px;
+      margin-top: 2px;
+    }
+
+    .job-list li {
+      list-style: square;
+      margin-left: 12px;
+    }
+
+    .small {
+      font-size: 11px;
+      opacity: 0.8;
+    }
+
+    .footer-bar {
+      margin-top: 6px;
+      font-size: 11px;
+      text-align: right;
+      opacity: 0.75;
+    }
+
+    @media (max-width: 900px) {
+      .main-panel {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="screen">
+  <div class="top-bar">
+    <span class="label">Game</span>
+    <span class="value">Final Fantasy Tactics: The Ivalice Chronicles &mdash; Challenge Run Setup</span>
+  </div>
+
+  <div class="main-panel">
+    <!-- LEFT: Controls -->
+    <div class="left-column">
+      <!-- Required Settings -->
+      <div class="panel">
+        <div class="panel-title">Required Settings</div>
+        <div class="panel-content">
+          <label>
+            Party Size:
+            <select id="partySize">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="5">*</option>
+            </select>
+            <span class="small">(* = full party)</span>
+          </label>
+
+          <label>
+            <input type="checkbox" id="unanimous">
+            Unanimous (one roll for all characters)
+          </label>
+
+          <div class="hint">
+            If <strong>Monstrous</strong> is active and Unanimous is checked, Ramza is rolled separately from the rest of the party.
+          </div>
+        </div>
+      </div>
+
+      <!-- Special Settings -->
+      <div class="panel">
+        <div class="panel-title">Special Settings</div>
+        <div class="panel-content">
+          <label class="inline">
+            <input type="radio" name="specialMode" value="none" checked>
+            None
+          </label>
+          <label>
+            <input type="radio" name="specialMode" value="monstrous">
+            Monstrous &mdash; Only monsters (Ramza excepted)
+          </label>
+          <label>
+            <input type="radio" name="specialMode" value="fjf">
+            Four Job Fiesta &mdash; 4 random jobs only
+          </label>
+
+          <div class="hint">
+            Only one special setting may be active at a time.
+          </div>
+        </div>
+      </div>
+
+      <!-- Job Settings -->
+      <div class="panel">
+        <div class="panel-title">Job Settings</div>
+        <div class="panel-content">
+          <div>
+            <strong>Job Scope:</strong>
+          </div>
+          <label class="inline">
+            <input type="radio" name="jobScope" value="human" checked>
+            Human Jobs
+          </label>
+          <label class="inline">
+            <input type="radio" name="jobScope" value="monster">
+            Monster Families
+          </label>
+
+          <div style="margin-top:6px;">
+            <strong>Job Limitation:</strong>
+          </div>
+          <label>
+            <select id="jobLimitation"></select>
+          </label>
+          <div class="hint" id="jobLimitationHint"></div>
+
+          <div style="margin-top:6px;">
+            <strong>Job Type:</strong>
+          </div>
+          <label>
+            <select id="jobType">
+              <!-- Filled by JS based on scope -->
+            </select>
+          </label>
+
+          <div class="hint">
+            For job limitations that require unlocking, you may play normally until <strong>Mandalia Plains</strong>,
+            then swap into your assigned jobs and remain within the restriction for the rest of the run.
+          </div>
+        </div>
+      </div>
+
+      <!-- Other Settings -->
+      <div class="panel">
+        <div class="panel-title">Other Settings</div>
+        <div class="panel-content">
+          <div>
+            <strong>Crystals:</strong>
+          </div>
+          <label class="inline">
+            <input type="radio" name="crystals" value="Normal" checked> Normal
+          </label>
+          <label class="inline">
+            <input type="radio" name="crystals" value="Only Crystals"> Only Crystals
+          </label>
+          <label>
+            <input type="radio" name="crystals" value="No Crystals"> No Crystals
+          </label>
+
+          <div style="margin-top:6px;">
+            <strong>Shops:</strong>
+          </div>
+          <label class="inline">
+            <input type="radio" name="shops" value="Normal" checked> Normal
+          </label>
+          <label class="inline">
+            <input type="radio" name="shops" value="Items Only"> Items Only
+          </label>
+          <label>
+            <input type="radio" name="shops" value="Strict"> Strict
+          </label>
+
+          <div style="margin-top:6px;">
+            <strong>Random Battles:</strong>
+          </div>
+          <label class="inline">
+            <input type="radio" name="randomBattles" value="Normal" checked> Normal
+          </label>
+          <label class="inline">
+            <input type="radio" name="randomBattles" value="Forbidden"> Forbidden
+          </label>
+          <label>
+            <input type="radio" name="randomBattles" value="Required"> Required
+          </label>
+
+          <div class="buttons">
+            <button class="btn" id="btnRandomize">Randomize Run</button>
+            <button class="btn secondary" id="btnReset">Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Output -->
+    <div class="right-column">
+      <div class="panel">
+        <div class="panel-title">Run Summary</div>
+        <div class="panel-content results-panel" id="results">
+          <div class="hint">
+            Configure options on the left, then select <strong>Randomize Run</strong> to generate a challenge.
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Notes</div>
+        <div class="panel-content small">
+          <ul style="margin-top:0; padding-left:16px;">
+            <li>
+              Story special characters (outside of temporary guests) are prohibited due to how late they join.
+            </li>
+            <li>
+              Consider keeping a save at <strong>Mandalia Plains</strong> with all jobs unlocked to quickly start new runs.
+            </li>
+            <li>
+              <strong>Monstrous</strong>: Only monsters may be used, except Ramza.
+            </li>
+            <li>
+              <strong>Four Job Fiesta</strong>: Only four randomly selected jobs are legal; units may mix abilities among those four.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bar">
+    &larr; Confirm | Cancel &rarr;
+  </div>
+</div>
+
+<script>
+  // ====== Data ======
+  const humanJobs = [
+    "Squire", "Chemist", "Knight", "Archer", "White Mage", "Black Mage",
+    "Monk", "Thief", "Oracle", "Time Mage", "Geomancer", "Dragoon",
+    "Orator", "Summoner", "Samurai", "Ninja", "Arithmetician",
+    "Dancer", "Bard", "Mime"
+  ];
+
+  const monsterFamilies = [
+    { name: "Chocobo Family", members: ["Chocobo", "Black Chocobo", "Red Chocobo"] },
+    { name: "Goblin Family", members: ["Goblin", "Black Goblin", "Gobbledygook"] },
+    { name: "Bomb Family", members: ["Bomb", "Grenade", "Exploder"] },
+    { name: "Panther Family", members: ["Red Panther", "Coeurl", "Vampire Cat"] },
+    { name: "Mindflayer Family", members: ["Piscodemon", "Squidrakin", "Mindflayer"] },
+    { name: "Skeleton Family", members: ["Skeleton", "Bonesnatch", "Skeletal Fiend"] },
+    { name: "Ghost Family", members: ["Ghoul", "Ghast", "Revenant"] },
+    { name: "Ahriman Family", members: ["Floating Eye", "Ahriman", "Plague Horror"] },
+    { name: "Aevis Family", members: ["Jura Aevis", "Steelhawk", "Cockatrice"] },
+    { name: "Pig Family", members: ["Pig", "Swine", "Wild Boar"] },
+    { name: "Treant Family", members: ["Dryad", "Treant", "Elder Treant"] },
+    { name: "Minotaur Family", members: ["Wisenkin", "Minotaur", "Sekhret"] },
+    { name: "Malboro Family", members: ["Malboro", "Ochu", "Great Malboro"] },
+    { name: "Behemoth Family", members: ["Behemoth", "Behemoth King", "Dark Behemoth"] },
+    { name: "Dragon Family", members: ["Dragon", "Blue Dragon", "Red Dragon"] },
+    { name: "Hydra Family", members: ["Hydra", "Greater Hydra", "Tiamat"] }
+  ];
+
+  // ====== Helpers ======
+  function randomChoice(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  function shuffle(arr) {
+    const copy = arr.slice();
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
+  function getSelectedRadio(name) {
+    const el = document.querySelector(`input[name="${name}"]:checked`);
+    return el ? el.value : null;
+  }
+
+  // ====== Job limitation UI ======
+  const jobLimitationSelect = document.getElementById("jobLimitation");
+  const jobLimitationHint = document.getElementById("jobLimitationHint");
+  const jobTypeSelect = document.getElementById("jobType");
+
+  const humanLimitations = [
+    {
+      value: "strict",
+      label: "Strict (single job, no cross-abilities)",
+      hint: "Each unit may only use one job at a time and may not equip abilities from other jobs."
+    },
+    {
+      value: "locked",
+      label: "Locked (same job the entire run)",
+      hint: "Each unit is locked into its assigned job for the whole run."
+    },
+    {
+      value: "secondary",
+      label: "Secondary (one random secondary job)",
+      hint: "Each unit may equip a secondary ability set from one randomly chosen job and must keep that pairing."
+    }
+  ];
+
+  const monsterLimitations = [
+    {
+      value: "monster-loose",
+      label: "Loose (any monster in the family)",
+      hint: "You may use any monster within the chosen family."
+    },
+    {
+      value: "monster-strict",
+      label: "Strict (single monster type)",
+      hint: "You must stick to a single monster type from within the chosen family."
+    }
+  ];
+
+  function populateJobLimitation() {
+    const scope = getSelectedRadio("jobScope");
+    const source = scope === "monster" ? monsterLimitations : humanLimitations;
+
+    jobLimitationSelect.innerHTML = "";
+    source.forEach(item => {
+      const opt = document.createElement("option");
+      opt.value = item.value;
+      opt.textContent = item.label;
+      jobLimitationSelect.appendChild(opt);
+    });
+    updateJobLimitationHint();
+  }
+
+  function updateJobLimitationHint() {
+    const scope = getSelectedRadio("jobScope");
+    const value = jobLimitationSelect.value;
+    const source = scope === "monster" ? monsterLimitations : humanLimitations;
+    const found = source.find(x => x.value === value);
+    jobLimitationHint.textContent = found ? found.hint : "";
+  }
+
+  function populateJobType() {
+    const scope = getSelectedRadio("jobScope");
+    jobTypeSelect.innerHTML = "";
+
+    if (scope === "monster") {
+      monsterFamilies.forEach((fam, index) => {
+        const opt = document.createElement("option");
+        opt.value = String(index);
+        opt.textContent = fam.name;
+        jobTypeSelect.appendChild(opt);
+      });
+    } else {
+      humanJobs.forEach(job => {
+        const opt = document.createElement("option");
+        opt.value = job;
+        opt.textContent = job;
+        jobTypeSelect.appendChild(opt);
+      });
+    }
+  }
+
+  // Auto-force monster scope when Monstrous selected
+  function syncScopeWithSpecial() {
+    const special = getSelectedRadio("specialMode");
+    const monsterScopeRadio = document.querySelector('input[name="jobScope"][value="monster"]');
+    const humanScopeRadio = document.querySelector('input[name="jobScope"][value="human"]');
+
+    if (special === "monstrous") {
+      monsterScopeRadio.checked = true;
+      monsterScopeRadio.disabled = false;
+      humanScopeRadio.disabled = true;
+    } else {
+      humanScopeRadio.disabled = false;
+    }
+
+    populateJobLimitation();
+    populateJobType();
+  }
+
+  // ====== Generation logic ======
+  const resultsEl = document.getElementById("results");
+
+  function generateRun() {
+    // Party size
+    const sizeValue = document.getElementById("partySize").value;
+    const partySize = sizeValue === "5" ? 5 : parseInt(sizeValue, 10);
+    const unanimous = document.getElementById("unanimous").checked;
+
+    // Special / scope
+    const specialMode = getSelectedRadio("specialMode");
+    const scope = getSelectedRadio("jobScope");
+    const limitation = jobLimitationSelect.value;
+    const jobTypeSelection = jobTypeSelect.value;
+
+    const crystals = getSelectedRadio("crystals");
+    const shops = getSelectedRadio("shops");
+    const randomBattles = getSelectedRadio("randomBattles");
+
+    // Build job assignments
+    const characters = [];
+    const maxSlots = partySize;
+
+    if (specialMode === "fjf") {
+      // Four Job Fiesta: pick 4 unique jobs
+      const shuffledJobs = shuffle(humanJobs);
+      const fiestaJobs = shuffledJobs.slice(0, 4);
+
+      if (unanimous) {
+        for (let i = 0; i < maxSlots; i++) {
+          const baseJob = randomChoice(fiestaJobs);
+          characters.push({
+            name: i === 0 ? "Ramza" : "Ally " + i,
+            baseJob,
+            fiestaJobs,
+            note: "Four Job Fiesta pool"
+          });
+        }
+      } else {
+        for (let i = 0; i < maxSlots; i++) {
+          const baseJob = fiestaJobs[i % fiestaJobs.length];
+          characters.push({
+            name: i === 0 ? "Ramza" : "Ally " + i,
+            baseJob,
+            fiestaJobs,
+            note: "Four Job Fiesta pool"
+          });
+        }
+      }
+
+      renderResults({
+        partySize,
+        unanimous,
+        specialMode,
+        scope: "human",
+        limitation,
+        crystals,
+        shops,
+        randomBattles,
+        fiestaJobs,
+        characters
+      });
+      return;
+    }
+
+    if (specialMode === "monstrous") {
+      // Monstrous: monsters only, except Ramza
+      const familyIndex = parseInt(jobTypeSelection, 10) || 0;
+      const family = monsterFamilies[familyIndex];
+
+      // Ramza gets a human job
+      const ramzaJob = randomChoice(humanJobs);
+
+      if (unanimous) {
+        // One roll for Ramza, one for the monster party as a whole
+        characters.push({
+          name: "Ramza",
+          baseJob: ramzaJob,
+          note: "Human (Monstrous exception)"
+        });
+        for (let i = 1; i < maxSlots; i++) {
+          characters.push({
+            name: "Monster " + i,
+            baseJob: family.name,
+            members: family.members.slice(),
+            note: limitation === "monster-strict"
+              ? "Strict monster type within family"
+              : "Any monster within family"
+          });
+        }
+      } else {
+        characters.push({
+          name: "Ramza",
+          baseJob: ramzaJob,
+          note: "Human (Monstrous exception)"
+        });
+        for (let i = 1; i < maxSlots; i++) {
+          const member = limitation === "monster-strict"
+            ? randomChoice(family.members)
+            : family.name;
+          characters.push({
+            name: "Monster " + i,
+            baseJob: member,
+            members: family.members.slice(),
+            note: limitation === "monster-strict"
+              ? "Locked to this monster type"
+              : "Any monster within family"
+          });
+        }
+      }
+
+      renderResults({
+        partySize,
+        unanimous,
+        specialMode,
+        scope: "monster",
+        limitation,
+        crystals,
+        shops,
+        randomBattles,
+        family,
+        characters
+      });
+      return;
+    }
+
+    // Normal human / monster run without special modes
+    if (scope === "monster") {
+      const familyIndex = parseInt(jobTypeSelection, 10) || 0;
+      const family = monsterFamilies[familyIndex];
+
+      if (unanimous) {
+        for (let i = 0; i < maxSlots; i++) {
+          characters.push({
+            name: i === 0 ? "Ramza" : "Ally " + i,
+            baseJob: family.name,
+            members: family.members.slice(),
+            note: limitation === "monster-strict"
+              ? "Strict monster type within family"
+              : "Any monster within family"
+          });
+        }
+      } else {
+        for (let i = 0; i < maxSlots; i++) {
+          const member = limitation === "monster-strict"
+            ? randomChoice(family.members)
+            : family.name;
+          characters.push({
+            name: i === 0 ? "Ramza" : "Ally " + i,
+            baseJob: member,
+            members: family.members.slice(),
+            note: limitation === "monster-strict"
+              ? "Locked to this monster type"
+              : "Any monster within family"
+          });
+        }
+      }
+
+      renderResults({
+        partySize,
+        unanimous,
+        specialMode,
+        scope: "monster",
+        limitation,
+        crystals,
+        shops,
+        randomBattles,
+        family,
+        characters
+      });
+    } else {
+      // Human jobs
+      let baseJob;
+      const secondaryJobs = {};
+
+      if (unanimous) {
+        baseJob = jobTypeSelection || randomChoice(humanJobs);
+        for (let i = 0; i < maxSlots; i++) {
+          const name = i === 0 ? "Ramza" : "Ally " + i;
+          let secondary = null;
+          if (limitation === "secondary") {
+            secondary = randomChoice(humanJobs.filter(j => j !== baseJob));
+            secondaryJobs[name] = secondary;
+          }
+
+          characters.push({
+            name,
+            baseJob,
+            secondary: secondaryJobs[name] || null,
+            note: buildHumanNote(limitation)
+          });
+        }
+      } else {
+        for (let i = 0; i < maxSlots; i++) {
+          const name = i === 0 ? "Ramza" : "Ally " + i;
+          const charJob = jobTypeSelection || randomChoice(humanJobs);
+          let secondary = null;
+
+          if (limitation === "secondary") {
+            secondary = randomChoice(humanJobs.filter(j => j !== charJob));
+          }
+
+          characters.push({
+            name,
+            baseJob: charJob,
+            secondary,
+            note: buildHumanNote(limitation)
+          });
+        }
+      }
+
+      renderResults({
+        partySize,
+        unanimous,
+        specialMode,
+        scope: "human",
+        limitation,
+        crystals,
+        shops,
+        randomBattles,
+        characters
+      });
+    }
+  }
+
+  function buildHumanNote(limitation) {
+    switch (limitation) {
+      case "strict":
+        return "Single job at a time; no cross-job abilities.";
+      case "locked":
+        return "Locked into assigned job for entire run.";
+      case "secondary":
+        return "Fixed secondary job paired with base job.";
+      default:
+        return "";
+    }
+  }
+
+  // ====== Render ======
+  function renderResults(data) {
+    const {
+      partySize,
+      unanimous,
+      specialMode,
+      scope,
+      limitation,
+      crystals,
+      shops,
+      randomBattles,
+      fiestaJobs,
+      family,
+      characters
+    } = data;
+
+    const sizeLabel = partySize === 5 ? "* (full party)" : String(partySize);
+
+    const specialLabel = (() => {
+      if (specialMode === "monstrous") return "Monstrous";
+      if (specialMode === "fjf") return "Four Job Fiesta";
+      return "None";
+    })();
+
+    const scopeLabel = scope === "monster" ? "Monster Families" : "Human Jobs";
+
+    const limitationLabelMap = {
+      "strict": "Strict",
+      "locked": "Locked",
+      "secondary": "Secondary",
+      "monster-loose": "Monster (Loose)",
+      "monster-strict": "Monster (Strict)"
+    };
+    const limitationLabel = limitationLabelMap[limitation] || limitation;
+
+    let html = "";
+
+    html += `<div class="results-section-title">General</div>`;
+    html += `<div class="row"><span class="label">Party Size</span><span class="value">${sizeLabel}</span></div>`;
+    html += `<div class="row"><span class="label">Unanimous</span><span class="value">${unanimous ? "Yes" : "No"}</span></div>`;
+    html += `<div class="row"><span class="label">Special Setting</span><span class="value">${specialLabel}</span></div>`;
+    html += `<div class="row"><span class="label">Job Scope</span><span class="value">${scopeLabel}</span></div>`;
+    html += `<div class="row"><span class="label">Job Limitation</span><span class="value">${limitationLabel}</span></div>`;
+
+    html += `<div class="results-section-title">Run Rules</div>`;
+    html += `<div class="row"><span class="label">Crystals</span><span class="value">${crystals}</span></div>`;
+    html += `<div class="row"><span class="label">Shops</span><span class="value">${shops}</span></div>`;
+    html += `<div class="row"><span class="label">Random Battles</span><span class="value">${randomBattles}</span></div>`;
+
+    if (specialMode === "fjf" && fiestaJobs) {
+      html += `<div class="results-section-title">Four Job Fiesta Pool</div>`;
+      html += `<ul class="job-list">`;
+      fiestaJobs.forEach(j => {
+        html += `<li>${j}</li>`;
+      });
+      html += `</ul>`;
+    }
+
+    if (scope === "monster" && family) {
+      html += `<div class="results-section-title">Monster Family</div>`;
+      html += `<div class="row"><span class="label">Family</span><span class="value">${family.name}</span></div>`;
+      html += `<div class="small" style="margin-top:4px;">Members: ${family.members.join(", ")}</div>`;
+    }
+
+    html += `<div class="results-section-title">Party</div>`;
+    html += `<ul class="job-list">`;
+    characters.forEach(ch => {
+      let line = `<strong>${ch.name}</strong>: ${ch.baseJob}`;
+      if (ch.secondary) {
+        line += ` / Secondary: ${ch.secondary}`;
+      }
+      if (ch.note) {
+        line += ` <span class="small">(${ch.note})</span>`;
+      }
+      html += `<li>${line}</li>`;
+    });
+    html += `</ul>`;
+
+    html += `<div class="hint" style="margin-top:6px;">Play normally until you reach <strong>Mandalia Plains</strong>, unlock the required jobs, then switch into your assigned configuration for the remainder of the run.</div>`;
+
+    resultsEl.innerHTML = html;
+  }
+
+  // ====== Reset ======
+  function resetForm() {
+    document.getElementById("partySize").value = "1";
+    document.getElementById("unanimous").checked = false;
+
+    document.querySelector('input[name="specialMode"][value="none"]').checked = true;
+
+    const humanScope = document.querySelector('input[name="jobScope"][value="human"]');
+    const monsterScope = document.querySelector('input[name="jobScope"][value="monster"]');
+    humanScope.checked = true;
+    humanScope.disabled = false;
+    monsterScope.disabled = false;
+
+    document.querySelector('input[name="crystals"][value="Normal"]').checked = true;
+    document.querySelector('input[name="shops"][value="Normal"]').checked = true;
+    document.querySelector('input[name="randomBattles"][value="Normal"]').checked = true;
+
+    populateJobLimitation();
+    populateJobType();
+
+    resultsEl.innerHTML = `<div class="hint">
+      Configure options on the left, then select <strong>Randomize Run</strong> to generate a challenge.
+    </div>`;
+  }
+
+  // ====== Event wiring ======
+  document.addEventListener("DOMContentLoaded", () => {
+    populateJobLimitation();
+    populateJobType();
+
+    document.querySelectorAll('input[name="jobScope"]').forEach(el => {
+      el.addEventListener("change", () => {
+        populateJobLimitation();
+        populateJobType();
+      });
+    });
+
+    jobLimitationSelect.addEventListener("change", updateJobLimitationHint);
+
+    document.querySelectorAll('input[name="specialMode"]').forEach(el => {
+      el.addEventListener("change", syncScopeWithSpecial);
+    });
+
+    document.getElementById("btnRandomize").addEventListener("click", generateRun);
+    document.getElementById("btnReset").addEventListener("click", resetForm);
+  });
+</script>
+</body>
+</html>
