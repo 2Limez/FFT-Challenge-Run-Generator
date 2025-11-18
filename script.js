@@ -219,29 +219,36 @@ function updateMemberDropdowns(memberIndex) {
       jobSelect.appendChild(opt);
     });
     
-    // Show secondary dropdown
-    if (secondaryContainer) {
+    // Check if Five Job Fiesta is selected
+    const specialMode = getSelectedRadio("specialMode");
+    const isFJF = specialMode === "fjf";
+    
+    // Show secondary dropdown only if not Five Job Fiesta
+    if (!isFJF && secondaryContainer) {
       secondaryContainer.style.display = "inline-flex";
+      if (secondaryLabel) {
+        secondaryLabel.textContent = "Secondary: ";
+      }
+      secondarySelect.innerHTML = "";
+      // Add blank option at the top
+      const blankSecondaryOpt = document.createElement("option");
+      blankSecondaryOpt.value = "";
+      blankSecondaryOpt.textContent = "";
+      secondarySelect.appendChild(blankSecondaryOpt);
+      const noneOpt = document.createElement("option");
+      noneOpt.value = "none";
+      noneOpt.textContent = "(none)";
+      secondarySelect.appendChild(noneOpt);
+      humanJobs.forEach(job => {
+        const opt = document.createElement("option");
+        opt.value = job;
+        opt.textContent = job;
+        secondarySelect.appendChild(opt);
+      });
+    } else if (isFJF && secondaryContainer) {
+      // Hide secondary dropdown for Five Job Fiesta
+      secondaryContainer.style.display = "none";
     }
-    if (secondaryLabel) {
-      secondaryLabel.textContent = "Secondary: ";
-    }
-    secondarySelect.innerHTML = "";
-    // Add blank option at the top
-    const blankSecondaryOpt = document.createElement("option");
-    blankSecondaryOpt.value = "";
-    blankSecondaryOpt.textContent = "";
-    secondarySelect.appendChild(blankSecondaryOpt);
-    const noneOpt = document.createElement("option");
-    noneOpt.value = "none";
-    noneOpt.textContent = "(none)";
-    secondarySelect.appendChild(noneOpt);
-    humanJobs.forEach(job => {
-      const opt = document.createElement("option");
-      opt.value = job;
-      opt.textContent = job;
-      secondarySelect.appendChild(opt);
-    });
   } else if (type === "Monster") {
     // Show monster families in second dropdown
     jobSelect.style.display = "flex";
@@ -279,6 +286,8 @@ function updateSecondaryEnabledState(memberIndex) {
   const jobSelect = document.getElementById(`member${memberIndex}_job`);
   const secondarySelect = document.getElementById(`member${memberIndex}_secondary`);
   const typeSelect = document.getElementById(`member${memberIndex}_type`);
+  const secondaryLabel = document.getElementById(`member${memberIndex}_secondaryLabel`);
+  const secondaryContainer = secondaryLabel ? secondaryLabel.parentElement : null;
   
   if (!secondarySelect) return;
   
@@ -291,10 +300,21 @@ function updateSecondaryEnabledState(memberIndex) {
   const isHuman = type === "Ramza" || type === "Human";
   const isMonster = type === "Monster";
   
-  // For humans/Ramza: disable if Five Job Fiesta OR main job not selected
+  // For humans/Ramza: hide entirely if Five Job Fiesta, otherwise disable if main job not selected
   if (isHuman) {
-    const shouldDisable = isFJF || !jobSelect || jobSelect.value === "";
-    secondarySelect.disabled = shouldDisable;
+    if (isFJF) {
+      // Hide secondary dropdown entirely for Five Job Fiesta
+      if (secondaryContainer) {
+        secondaryContainer.style.display = "none";
+      }
+    } else {
+      // Show secondary dropdown if not FJF
+      if (secondaryContainer) {
+        secondaryContainer.style.display = "inline-flex";
+      }
+      const shouldDisable = !jobSelect || jobSelect.value === "";
+      secondarySelect.disabled = shouldDisable;
+    }
   }
   // For monsters: enable if monster family is selected
   else if (isMonster) {
@@ -676,7 +696,7 @@ function generateRun() {
       name: "Ramza",
       baseJob: ramzaJob,
       secondary: ramzaSecondary || null,
-      note: "Human (Monstrous exception)"
+      note: ""
     });
 
     if (unanimous) {
