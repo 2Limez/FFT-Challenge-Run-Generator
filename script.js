@@ -74,7 +74,7 @@ function populatePartyMemberSettings() {
     const memberLabel = document.createElement("div");
     memberLabel.style.marginBottom = "4px";
     memberLabel.style.fontWeight = "600";
-    memberLabel.textContent = i === 0 ? "Ramza" : `Party Member ${i}`;
+    memberLabel.textContent = i === 0 ? "Ramza" : `Party Member ${i + 1}`;
     memberDiv.appendChild(memberLabel);
     
     // First dropdown: Type selection
@@ -285,7 +285,7 @@ function generateRun() {
       for (let i = 0; i < maxSlots; i++) {
         const baseJob = randomChoice(fiestaJobs);
         characters.push({
-          name: i === 0 ? "Ramza" : "Ally " + i,
+          name: i === 0 ? "Ramza" : "Ally " + (i + 1),
           baseJob,
           fiestaJobs,
           note: "Five Job Fiesta pool"
@@ -295,7 +295,7 @@ function generateRun() {
       for (let i = 0; i < maxSlots; i++) {
         const baseJob = fiestaJobs[i % fiestaJobs.length];
         characters.push({
-          name: i === 0 ? "Ramza" : "Ally " + i,
+          name: i === 0 ? "Ramza" : "Ally " + (i + 1),
           baseJob,
           fiestaJobs,
           note: "Five Job Fiesta pool"
@@ -366,7 +366,7 @@ function generateRun() {
   if (specialMode === "humansOnly") {
     // Humans Only: only human characters allowed
     for (let i = 0; i < maxSlots; i++) {
-      const name = i === 0 ? "Ramza" : `Party Member ${i}`;
+      const name = i === 0 ? "Ramza" : `Party Member ${i + 1}`;
       const baseJob = randomChoice(humanJobs);
       let secondary = null;
       
@@ -421,7 +421,7 @@ function generateRun() {
       for (let i = 1; i < maxSlots; i++) {
         const member = randomChoice(family.members);
         characters.push({
-          name: "Monster " + i,
+          name: "Monster " + (i + 1),
           baseJob: member,
           members: family.members.slice(),
           note: "Any monster within family"
@@ -436,7 +436,7 @@ function generateRun() {
       for (let i = 1; i < maxSlots; i++) {
         const member = randomChoice(family.members);
         characters.push({
-          name: "Monster " + i,
+          name: "Monster " + (i + 1),
           baseJob: member,
           members: family.members.slice(),
           note: "Any monster within family"
@@ -468,7 +468,7 @@ function generateRun() {
     
     if (!typeSelect) continue;
     
-    const name = i === 0 ? "Ramza" : `Party Member ${i}`;
+    const name = i === 0 ? "Ramza" : `Party Member ${i + 1}`;
     
     let baseJob = null;
     let secondary = null;
@@ -480,14 +480,12 @@ function generateRun() {
       characterType = "Ramza";
       baseJob = randomChoice(humanJobs);
       
-      // Randomly assign secondary job 30% of the time
-      if (Math.random() < 0.3) {
+      // Randomly assign secondary job
         // Ensure secondary is different from base job
         const availableJobs = humanJobs.filter(j => j !== baseJob);
         if (availableJobs.length > 0) {
           secondary = randomChoice(availableJobs);
         }
-      }
     } else {
       // For other members, randomly choose Human or Monster
       const isHuman = Math.random() < 0.5;
@@ -496,14 +494,12 @@ function generateRun() {
         characterType = "Human";
         baseJob = randomChoice(humanJobs);
         
-        // Randomly assign secondary job 30% of the time
-        if (Math.random() < 0.3) {
+        // Randomly assign secondary job
           // Ensure secondary is different from base job
           const availableJobs = humanJobs.filter(j => j !== baseJob);
           if (availableJobs.length > 0) {
             secondary = randomChoice(availableJobs);
           }
-        }
       } else {
         characterType = "Monster";
         const familyIndex = Math.floor(Math.random() * monsterFamilies.length);

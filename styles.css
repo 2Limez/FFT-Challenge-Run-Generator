@@ -1,3 +1,13 @@
+/* ====== Font Face ====== */
+@font-face {
+  font-family: "Badr Bold";
+  src: url('fonts/Badr Bold/Badr Bold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+  unicode-range: U+0020-002F, U+003A-007E, U+00A0-00FF, U+0100-017F, U+0180-024F, U+1E00-1EFF, U+2000-206F, U+20A0-20CF, U+2100-214F, U+2190-21FF, U+2200-22FF, U+2C60-2C7F, U+A720-A7FF, U+FB00-FB4F;
+  /* Exclude numbers (U+0030-0039) so they use fallback font */
+}
+
 /* ====== Global layout / FFT-style look ====== */
 html {
   margin: 0;
@@ -11,8 +21,10 @@ html, body {
   background-size: 22% auto;
   background-position: -20% 0;
   color: #f4f8ff;
-  font-family: "Trebuchet MS", "Verdana", sans-serif;
+  font-family: "Badr Bold", "Trebuchet MS", "Verdana", sans-serif;
 }
+
+/* Numbers will automatically use fallback font due to unicode-range exclusion */
 
 body {
   display: flex;
