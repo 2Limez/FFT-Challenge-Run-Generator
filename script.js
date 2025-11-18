@@ -45,9 +45,9 @@ function getSelectedRadio(name) {
 }
 
 // ====== Job limitation UI ======
-const jobLimitationSelect = document.getElementById("jobLimitation");
-const jobLimitationHint = document.getElementById("jobLimitationHint");
-const jobTypeSelect = document.getElementById("jobType");
+let jobLimitationSelect;
+let jobLimitationHint;
+let jobTypeSelect;
 
 const humanLimitations = [
   {
@@ -142,7 +142,7 @@ function syncScopeWithSpecial() {
 }
 
 // ====== Generation logic ======
-const resultsEl = document.getElementById("results");
+let resultsEl;
 
 function generateRun() {
   // Party size
@@ -208,7 +208,7 @@ function generateRun() {
 
   if (specialMode === "monstrous") {
     // Monstrous: monsters only, except Ramza
-    const familyIndex = parseInt(jobTypeSelection, 10) || 0;
+    const familyIndex = Math.floor(Math.random() * monsterFamilies.length);
     const family = monsterFamilies[familyIndex];
 
     // Ramza gets a human job
@@ -269,7 +269,7 @@ function generateRun() {
 
   // Normal human / monster run without special modes
   if (scope === "monster") {
-    const familyIndex = parseInt(jobTypeSelection, 10) || 0;
+    const familyIndex = Math.floor(Math.random() * monsterFamilies.length);
     const family = monsterFamilies[familyIndex];
 
     if (unanimous) {
@@ -317,7 +317,7 @@ function generateRun() {
     const secondaryJobs = {};
 
     if (unanimous) {
-      baseJob = jobTypeSelection || randomChoice(humanJobs);
+      baseJob = randomChoice(humanJobs);
       for (let i = 0; i < maxSlots; i++) {
         const name = i === 0 ? "Ramza" : "Ally " + i;
         let secondary = null;
@@ -336,7 +336,7 @@ function generateRun() {
     } else {
       for (let i = 0; i < maxSlots; i++) {
         const name = i === 0 ? "Ramza" : "Ally " + i;
-        const charJob = jobTypeSelection || randomChoice(humanJobs);
+        const charJob = randomChoice(humanJobs);
         let secondary = null;
 
         if (limitation === "secondary") {
@@ -489,6 +489,12 @@ function resetForm() {
 
 // ====== Event wiring ======
 document.addEventListener("DOMContentLoaded", () => {
+  // Initialize DOM element references
+  jobLimitationSelect = document.getElementById("jobLimitation");
+  jobLimitationHint = document.getElementById("jobLimitationHint");
+  jobTypeSelect = document.getElementById("jobType");
+  resultsEl = document.getElementById("results");
+
   populateJobLimitation();
   populateJobType();
 

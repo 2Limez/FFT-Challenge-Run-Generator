@@ -2,7 +2,9 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: radial-gradient(circle at top, #202848 0%, #070910 65%, #020308 100%);
+  background: url('images/bg-tile.png') repeat;
+  background-size: 22% auto;
+  background-position: -20% 0;
   color: #f4f8ff;
   font-family: "Trebuchet MS", "Verdana", sans-serif;
   height: 100%;
