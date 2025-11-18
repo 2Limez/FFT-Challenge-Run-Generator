@@ -370,10 +370,12 @@ function generateRun() {
       const baseJob = randomChoice(humanJobs);
       let secondary = null;
       
-      // Randomly assign secondary job 30% of the time
-      if (Math.random() < 0.3) {
-        secondary = randomChoice(humanJobs.filter(j => j !== baseJob));
-      }
+      // Randomly assign secondary job
+        // Ensure secondary is different from base job
+        const availableJobs = humanJobs.filter(j => j !== baseJob);
+        if (availableJobs.length > 0) {
+          secondary = randomChoice(availableJobs);
+        }
       
       characters.push({
         name,
@@ -480,7 +482,11 @@ function generateRun() {
       
       // Randomly assign secondary job 30% of the time
       if (Math.random() < 0.3) {
-        secondary = randomChoice(humanJobs.filter(j => j !== baseJob));
+        // Ensure secondary is different from base job
+        const availableJobs = humanJobs.filter(j => j !== baseJob);
+        if (availableJobs.length > 0) {
+          secondary = randomChoice(availableJobs);
+        }
       }
     } else {
       // For other members, randomly choose Human or Monster
@@ -492,7 +498,11 @@ function generateRun() {
         
         // Randomly assign secondary job 30% of the time
         if (Math.random() < 0.3) {
-          secondary = randomChoice(humanJobs.filter(j => j !== baseJob));
+          // Ensure secondary is different from base job
+          const availableJobs = humanJobs.filter(j => j !== baseJob);
+          if (availableJobs.length > 0) {
+            secondary = randomChoice(availableJobs);
+          }
         }
       } else {
         characterType = "Monster";
@@ -536,7 +546,6 @@ function populateDropdownsFromCharacters(characters, partySize) {
     const typeSelect = document.getElementById(`member${i}_type`);
     const jobSelect = document.getElementById(`member${i}_job`);
     const secondarySelect = document.getElementById(`member${i}_secondary`);
-    
     if (!typeSelect) continue;
     
     // Determine if it's a human or monster
@@ -566,13 +575,16 @@ function populateDropdownsFromCharacters(characters, partySize) {
       typeSelect.value = charType;
       updateMemberDropdowns(i);
       
+      // Set values after dropdowns are populated
       if (jobSelect) {
         jobSelect.value = char.baseJob;
       }
       if (secondarySelect) {
-        if (char.secondary) {
+        // Set secondary if it exists and is different from base job
+        if (char.secondary && char.secondary !== char.baseJob && humanJobs.includes(char.secondary)) {
           secondarySelect.value = char.secondary;
         } else {
+          // No secondary or invalid - set to "(none)"
           secondarySelect.value = "";
         }
       }
