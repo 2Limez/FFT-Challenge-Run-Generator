@@ -25,12 +25,12 @@ html {
   padding: 0;
   height: 100%;
   overflow-y: auto;
-}
-
-html, body {
   background: url('images/bg-tile.png') repeat;
   background-size: 22% auto;
   background-position: -20% 0;
+}
+
+html, body {
   color: #221b11;
   font-family: "Badr Bold", "Trebuchet MS", "Verdana", sans-serif;
 }
