@@ -188,6 +188,11 @@ function updateMemberDropdowns(memberIndex) {
   if (type === "Ramza" || type === "Human") {
     // Show human jobs
     jobSelect.style.display = "flex";
+    // Add blank option at the top
+    const blankOpt = document.createElement("option");
+    blankOpt.value = "";
+    blankOpt.textContent = "(empty)";
+    jobSelect.appendChild(blankOpt);
     humanJobs.forEach(job => {
       const opt = document.createElement("option");
       opt.value = job;
@@ -203,10 +208,15 @@ function updateMemberDropdowns(memberIndex) {
       secondaryLabel.textContent = "Secondary: ";
     }
     secondarySelect.innerHTML = "";
-    const emptyOpt = document.createElement("option");
-    emptyOpt.value = "";
-    emptyOpt.textContent = "(none)";
-    secondarySelect.appendChild(emptyOpt);
+    // Add blank option at the top
+    const blankSecondaryOpt = document.createElement("option");
+    blankSecondaryOpt.value = "";
+    blankSecondaryOpt.textContent = "(empty)";
+    secondarySelect.appendChild(blankSecondaryOpt);
+    const noneOpt = document.createElement("option");
+    noneOpt.value = "none";
+    noneOpt.textContent = "(none)";
+    secondarySelect.appendChild(noneOpt);
     humanJobs.forEach(job => {
       const opt = document.createElement("option");
       opt.value = job;
@@ -216,6 +226,11 @@ function updateMemberDropdowns(memberIndex) {
   } else if (type === "Monster") {
     // Show monster families in second dropdown
     jobSelect.style.display = "flex";
+    // Add blank option at the top
+    const blankOpt = document.createElement("option");
+    blankOpt.value = "";
+    blankOpt.textContent = "(empty)";
+    jobSelect.appendChild(blankOpt);
     monsterFamilies.forEach((family, index) => {
       const opt = document.createElement("option");
       opt.value = String(index);
@@ -246,6 +261,12 @@ function updateMonsterTypeDropdown(memberIndex) {
   
   secondarySelect.innerHTML = "";
   
+  // Add blank option at the top
+  const blankOpt = document.createElement("option");
+  blankOpt.value = "";
+  blankOpt.textContent = "(empty)";
+  secondarySelect.appendChild(blankOpt);
+  
   const familyIndex = parseInt(jobSelect.value, 10);
   if (!isNaN(familyIndex) && familyIndex >= 0 && familyIndex < monsterFamilies.length) {
     const family = monsterFamilies[familyIndex];
@@ -269,6 +290,89 @@ function updateMonsterTypeDropdown(memberIndex) {
 // ====== Generation logic ======
 let resultsEl;
 
+// Helper function to get character data from dropdowns, randomizing only blank fields
+function getCharacterFromDropdowns(i, specialMode = null) {
+  const typeSelect = document.getElementById(`member${i}_type`);
+  const jobSelect = document.getElementById(`member${i}_job`);
+  const secondarySelect = document.getElementById(`member${i}_secondary`);
+  
+  if (!typeSelect) return null;
+  
+  const name = i === 0 ? "Ramza" : `Party Member ${i + 1}`;
+  let characterType = typeSelect.value;
+  let baseJob = null;
+  let secondary = null;
+  
+  // For Ramza, always use "Ramza" as type
+  if (i === 0) {
+    characterType = "Ramza";
+  }
+  
+  // Only randomize type if it's blank (and not Ramza)
+  if (characterType === "" && i > 0) {
+    characterType = Math.random() < 0.5 ? "Human" : "Monster";
+  }
+  
+  // If type is still blank or "*", skip this character
+  if (characterType === "" || characterType === "*") {
+    return null;
+  }
+  
+  // Get job/family - randomize only if blank
+  const jobValue = jobSelect ? jobSelect.value : "";
+  if (jobValue === "") {
+    // Need to randomize
+    if (characterType === "Ramza" || characterType === "Human") {
+      baseJob = randomChoice(humanJobs);
+    } else if (characterType === "Monster") {
+      const familyIndex = Math.floor(Math.random() * monsterFamilies.length);
+      const family = monsterFamilies[familyIndex];
+      baseJob = randomChoice(family.members);
+    }
+  } else {
+    // Use existing selection
+    if (characterType === "Ramza" || characterType === "Human") {
+      baseJob = jobValue;
+    } else if (characterType === "Monster") {
+      const familyIndex = parseInt(jobValue, 10);
+      if (!isNaN(familyIndex) && familyIndex >= 0 && familyIndex < monsterFamilies.length) {
+        const family = monsterFamilies[familyIndex];
+        // Check secondary for specific monster type
+        const secondaryValue = secondarySelect ? secondarySelect.value : "";
+        if (secondaryValue && secondaryValue !== "" && secondaryValue !== "*") {
+          baseJob = secondaryValue;
+        } else {
+          baseJob = randomChoice(family.members);
+        }
+      }
+    }
+  }
+  
+  // Get secondary - randomize only if blank (for humans/Ramza)
+  if ((characterType === "Ramza" || characterType === "Human") && secondarySelect) {
+    const secondaryValue = secondarySelect.value;
+    if (secondaryValue === "" || secondaryValue === "none") {
+      // Randomize secondary if blank
+      if (baseJob && humanJobs.includes(baseJob)) {
+        const availableJobs = humanJobs.filter(j => j !== baseJob);
+        if (availableJobs.length > 0) {
+          secondary = randomChoice(availableJobs);
+        }
+      }
+    } else if (secondaryValue !== "") {
+      secondary = secondaryValue;
+    }
+  }
+  
+  return {
+    name,
+    baseJob,
+    secondary: secondary || null,
+    characterType,
+    note: null
+  };
+}
+
 function generateRun() {
   // Party size
   const sizeValue = document.getElementById("partySize").value;
@@ -291,26 +395,44 @@ function generateRun() {
     const shuffledJobs = shuffle(humanJobs);
     const fiestaJobs = shuffledJobs.slice(0, 5);
 
-    if (unanimous) {
-      for (let i = 0; i < maxSlots; i++) {
-        const baseJob = randomChoice(fiestaJobs);
-        characters.push({
-          name: i === 0 ? "Ramza" : "Ally " + (i + 1),
-          baseJob,
-          fiestaJobs,
-          note: ""
-        });
+    for (let i = 0; i < maxSlots; i++) {
+      const jobSelect = document.getElementById(`member${i}_job`);
+      const secondarySelect = document.getElementById(`member${i}_secondary`);
+      const name = i === 0 ? "Ramza" : "Ally " + (i + 1);
+      
+      let baseJob = null;
+      let secondary = null;
+      
+      // Check if job is already set
+      if (jobSelect && jobSelect.value !== "" && fiestaJobs.includes(jobSelect.value)) {
+        baseJob = jobSelect.value;
+      } else {
+        // Randomize from fiesta jobs
+        if (unanimous) {
+          baseJob = randomChoice(fiestaJobs);
+        } else {
+          baseJob = fiestaJobs[i % fiestaJobs.length];
+        }
       }
-    } else {
-      for (let i = 0; i < maxSlots; i++) {
-        const baseJob = fiestaJobs[i % fiestaJobs.length];
-        characters.push({
-          name: i === 0 ? "Ramza" : "Ally " + (i + 1),
-          baseJob,
-          fiestaJobs,
-          note: ""
-        });
+      
+      // Check if secondary is already set
+      if (secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "none" && fiestaJobs.includes(secondarySelect.value)) {
+        secondary = secondarySelect.value;
+      } else if (secondarySelect && (secondarySelect.value === "" || secondarySelect.value === "none")) {
+        // Randomize secondary if blank
+        const availableJobs = fiestaJobs.filter(j => j !== baseJob);
+        if (availableJobs.length > 0) {
+          secondary = randomChoice(availableJobs);
+        }
       }
+      
+      characters.push({
+        name,
+        baseJob,
+        secondary: secondary || null,
+        fiestaJobs,
+        note: ""
+      });
     }
 
     // Populate dropdowns with generated values
@@ -334,24 +456,72 @@ function generateRun() {
   if (specialMode === "cavalry") {
     // Cavalry Challenge: 2 human units + 2 chocobos
     const chocoboFamily = monsterFamilies.find(f => f.name === "Chocobo Family");
-    const shuffledJobs = shuffle(humanJobs);
     
-    // 2 human units with random jobs
+    // 2 human units with random jobs (or use existing selections)
     for (let i = 0; i < 2; i++) {
-      const humanJob = randomChoice(humanJobs);
+      const jobSelect = document.getElementById(`member${i}_job`);
+      const secondarySelect = document.getElementById(`member${i}_secondary`);
+      const name = i === 0 ? "Ramza" : "Ally " + i;
+      
+      let baseJob = null;
+      let secondary = null;
+      
+      if (jobSelect && jobSelect.value !== "" && humanJobs.includes(jobSelect.value)) {
+        baseJob = jobSelect.value;
+      } else {
+        baseJob = randomChoice(humanJobs);
+      }
+      
+      if (secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "none") {
+        secondary = secondarySelect.value;
+      } else if (secondarySelect && (secondarySelect.value === "" || secondarySelect.value === "none")) {
+        const availableJobs = humanJobs.filter(j => j !== baseJob);
+        if (availableJobs.length > 0) {
+          secondary = randomChoice(availableJobs);
+        }
+      }
+      
       characters.push({
-        name: i === 0 ? "Ramza" : "Ally " + i,
-        baseJob: humanJob,
+        name,
+        baseJob,
+        secondary: secondary || null,
         note: "Must mount chocobo on first turn"
       });
     }
     
-    // 2 chocobos
-    for (let i = 0; i < 2; i++) {
-      const chocoboType = randomChoice(chocoboFamily.members);
+    // 2 chocobos (or use existing selections)
+    for (let i = 2; i < 4; i++) {
+      const jobSelect = document.getElementById(`member${i}_job`);
+      const secondarySelect = document.getElementById(`member${i}_secondary`);
+      const name = "Chocobo " + (i - 1);
+      
+      let baseJob = null;
+      
+      if (secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "*" && chocoboFamily.members.includes(secondarySelect.value)) {
+        baseJob = secondarySelect.value;
+      } else if (jobSelect && jobSelect.value !== "") {
+        const familyIndex = parseInt(jobSelect.value, 10);
+        if (!isNaN(familyIndex) && familyIndex >= 0 && familyIndex < monsterFamilies.length) {
+          const family = monsterFamilies[familyIndex];
+          if (family.name === "Chocobo Family") {
+            if (secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "*") {
+              baseJob = secondarySelect.value;
+            } else {
+              baseJob = randomChoice(family.members);
+            }
+          } else {
+            baseJob = randomChoice(chocoboFamily.members);
+          }
+        } else {
+          baseJob = randomChoice(chocoboFamily.members);
+        }
+      } else {
+        baseJob = randomChoice(chocoboFamily.members);
+      }
+      
       characters.push({
-        name: "Chocobo " + (i + 1),
-        baseJob: chocoboType,
+        name,
+        baseJob,
         note: "Mount for human unit"
       });
     }
@@ -376,16 +546,27 @@ function generateRun() {
   if (specialMode === "humansOnly") {
     // Humans Only: only human characters allowed
     for (let i = 0; i < maxSlots; i++) {
+      const jobSelect = document.getElementById(`member${i}_job`);
+      const secondarySelect = document.getElementById(`member${i}_secondary`);
       const name = i === 0 ? "Ramza" : `Party Member ${i + 1}`;
-      const baseJob = randomChoice(humanJobs);
+      
+      let baseJob = null;
       let secondary = null;
       
-      // Randomly assign secondary job
-        // Ensure secondary is different from base job
+      if (jobSelect && jobSelect.value !== "" && humanJobs.includes(jobSelect.value)) {
+        baseJob = jobSelect.value;
+      } else {
+        baseJob = randomChoice(humanJobs);
+      }
+      
+      if (secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "none") {
+        secondary = secondarySelect.value;
+      } else if (secondarySelect && (secondarySelect.value === "" || secondarySelect.value === "none")) {
         const availableJobs = humanJobs.filter(j => j !== baseJob);
         if (availableJobs.length > 0) {
           secondary = randomChoice(availableJobs);
         }
+      }
       
       characters.push({
         name,
@@ -415,20 +596,71 @@ function generateRun() {
 
   if (specialMode === "monstrous") {
     // Monstrous: monsters only, except Ramza
-    // Ramza gets a human job
-    const ramzaJob = randomChoice(humanJobs);
+    // Ramza gets a human job (or use existing selection)
+    const ramzaJobSelect = document.getElementById(`member0_job`);
+    const ramzaSecondarySelect = document.getElementById(`member0_secondary`);
+    let ramzaJob = null;
+    let ramzaSecondary = null;
+    
+    if (ramzaJobSelect && ramzaJobSelect.value !== "" && humanJobs.includes(ramzaJobSelect.value)) {
+      ramzaJob = ramzaJobSelect.value;
+    } else {
+      ramzaJob = randomChoice(humanJobs);
+    }
+    
+    if (ramzaSecondarySelect && ramzaSecondarySelect.value !== "" && ramzaSecondarySelect.value !== "none") {
+      ramzaSecondary = ramzaSecondarySelect.value;
+    } else if (ramzaSecondarySelect && (ramzaSecondarySelect.value === "" || ramzaSecondarySelect.value === "none")) {
+      const availableJobs = humanJobs.filter(j => j !== ramzaJob);
+      if (availableJobs.length > 0) {
+        ramzaSecondary = randomChoice(availableJobs);
+      }
+    }
+    
     characters.push({
       name: "Ramza",
       baseJob: ramzaJob,
+      secondary: ramzaSecondary || null,
       note: "Human (Monstrous exception)"
     });
 
     if (unanimous) {
       // One roll for the monster party as a whole
-      const familyIndex = Math.floor(Math.random() * monsterFamilies.length);
-      const family = monsterFamilies[familyIndex];
+      let family = null;
+      let familyIndex = -1;
+      
+      // Check if all monsters have the same family selected
+      const firstJobSelect = document.getElementById(`member1_job`);
+      if (firstJobSelect && firstJobSelect.value !== "") {
+        familyIndex = parseInt(firstJobSelect.value, 10);
+        if (!isNaN(familyIndex) && familyIndex >= 0 && familyIndex < monsterFamilies.length) {
+          family = monsterFamilies[familyIndex];
+        }
+      }
+      
+      if (!family) {
+        familyIndex = Math.floor(Math.random() * monsterFamilies.length);
+        family = monsterFamilies[familyIndex];
+      }
+      
       for (let i = 1; i < maxSlots; i++) {
-        const member = randomChoice(family.members);
+        const jobSelect = document.getElementById(`member${i}_job`);
+        const secondarySelect = document.getElementById(`member${i}_secondary`);
+        let member = null;
+        
+        if (secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "*" && family.members.includes(secondarySelect.value)) {
+          member = secondarySelect.value;
+        } else if (jobSelect && jobSelect.value !== "" && parseInt(jobSelect.value, 10) === familyIndex) {
+          // Same family selected, randomize member
+          member = randomChoice(family.members);
+        } else if (jobSelect && jobSelect.value === "") {
+          // Blank, randomize
+          member = randomChoice(family.members);
+        } else {
+          // Different family or invalid, use random from selected family
+          member = randomChoice(family.members);
+        }
+        
         characters.push({
           name: "Monster " + (i + 1),
           baseJob: member,
@@ -454,19 +686,39 @@ function generateRun() {
         characters
       });
     } else {
-      // Each monster gets its own family roll
+      // Each monster gets its own family roll (or use existing selections)
       const families = [];
       for (let i = 1; i < maxSlots; i++) {
-        const familyIndex = Math.floor(Math.random() * monsterFamilies.length);
-        const family = monsterFamilies[familyIndex];
+        const jobSelect = document.getElementById(`member${i}_job`);
+        const secondarySelect = document.getElementById(`member${i}_secondary`);
+        let family = null;
+        let member = null;
+        
+        if (jobSelect && jobSelect.value !== "") {
+          const selectedFamilyIndex = parseInt(jobSelect.value, 10);
+          if (!isNaN(selectedFamilyIndex) && selectedFamilyIndex >= 0 && selectedFamilyIndex < monsterFamilies.length) {
+            family = monsterFamilies[selectedFamilyIndex];
+            if (secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "*" && family.members.includes(secondarySelect.value)) {
+              member = secondarySelect.value;
+            } else {
+              member = randomChoice(family.members);
+            }
+          }
+        }
+        
+        if (!family) {
+          const familyIndex = Math.floor(Math.random() * monsterFamilies.length);
+          family = monsterFamilies[familyIndex];
+          member = randomChoice(family.members);
+        }
+        
         families.push(family);
-        const member = randomChoice(family.members);
         characters.push({
           name: "Monster " + (i + 1),
           baseJob: member,
           members: family.members.slice(),
           family: family.name,
-          note: "Any monster within family"
+          note: ""
         });
       }
 
@@ -489,60 +741,11 @@ function generateRun() {
     return;
   }
 
-  // Normal mode: always randomize all party members (including type)
+  // Normal mode: randomize only blank dropdowns
   for (let i = 0; i < maxSlots; i++) {
-    const typeSelect = document.getElementById(`member${i}_type`);
-    
-    if (!typeSelect) continue;
-    
-    const name = i === 0 ? "Ramza" : `Party Member ${i + 1}`;
-    
-    let baseJob = null;
-    let secondary = null;
-    let characterType;
-    
-    // Always randomize type (except Ramza is always Ramza)
-    if (i === 0) {
-      // First member is always Ramza
-      characterType = "Ramza";
-      baseJob = randomChoice(humanJobs);
-      
-      // Randomly assign secondary job
-        // Ensure secondary is different from base job
-        const availableJobs = humanJobs.filter(j => j !== baseJob);
-        if (availableJobs.length > 0) {
-          secondary = randomChoice(availableJobs);
-        }
-    } else {
-      // For other members, randomly choose Human or Monster
-      const isHuman = Math.random() < 0.5;
-      
-      if (isHuman) {
-        characterType = "Human";
-        baseJob = randomChoice(humanJobs);
-        
-        // Randomly assign secondary job
-          // Ensure secondary is different from base job
-          const availableJobs = humanJobs.filter(j => j !== baseJob);
-          if (availableJobs.length > 0) {
-            secondary = randomChoice(availableJobs);
-          }
-      } else {
-        characterType = "Monster";
-        const familyIndex = Math.floor(Math.random() * monsterFamilies.length);
-        const family = monsterFamilies[familyIndex];
-        baseJob = randomChoice(family.members);
-      }
-    }
-    
-    if (baseJob) {
-      characters.push({
-        name,
-        baseJob,
-        secondary: secondary || null,
-        characterType: characterType,
-        note: null
-      });
+    const char = getCharacterFromDropdowns(i);
+    if (char && char.baseJob) {
+      characters.push(char);
     }
   }
 
@@ -607,8 +810,12 @@ function populateDropdownsFromCharacters(characters, partySize) {
         if (char.secondary && char.secondary !== char.baseJob && humanJobs.includes(char.secondary)) {
           secondarySelect.value = char.secondary;
         } else {
-          // No secondary or invalid - set to "(none)"
-          secondarySelect.value = "";
+          // No secondary or invalid - set to "(none)" if option exists, otherwise blank
+          if (secondarySelect.querySelector('option[value="none"]')) {
+            secondarySelect.value = "none";
+          } else {
+            secondarySelect.value = "";
+          }
         }
       }
     }
