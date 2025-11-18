@@ -392,7 +392,7 @@ function generateRun() {
         baseJob,
         secondary: secondary || null,
         characterType: i === 0 ? "Ramza" : "Human",
-        note: secondary ? `Secondary: ${secondary}` : null
+        note: null
       });
     }
 
@@ -524,7 +524,7 @@ function generateRun() {
         baseJob,
         secondary: secondary || null,
         characterType: characterType,
-        note: secondary ? `Secondary: ${secondary}` : null
+        note: null
       });
     }
   }
@@ -685,7 +685,7 @@ function renderResults(data) {
   characters.forEach(ch => {
     let line = `<strong>${ch.name}</strong>: ${ch.baseJob}`;
     if (ch.secondary) {
-      line += ` / Secondary: ${ch.secondary}`;
+      line += ` / ${ch.secondary}`;
     }
     if (ch.note) {
       line += ` <span class="small">(${ch.note})</span>`;
