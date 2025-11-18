@@ -95,12 +95,17 @@ function populatePartyMemberSettings() {
       options.forEach(optVal => {
         const opt = document.createElement("option");
         opt.value = optVal;
-        opt.textContent = optVal || "(empty)";
+        opt.textContent = optVal || "";
         typeSelect.appendChild(opt);
       });
+      // Explicitly ensure type dropdown is enabled for non-Ramza members
+      typeSelect.removeAttribute('disabled');
     }
     
-    typeSelect.addEventListener("change", () => updateMemberDropdowns(i));
+    typeSelect.addEventListener("change", () => {
+      updateMemberDropdowns(i);
+      updateSecondaryEnabledState(i);
+    });
     dropdownsContainer.appendChild(typeSelect);
     
     // Second dropdown: Job/Monster Family selection
@@ -114,6 +119,7 @@ function populatePartyMemberSettings() {
       if (typeSel && typeSel.value === "Monster") {
         updateMonsterTypeDropdown(memberIndex);
       }
+      updateSecondaryEnabledState(memberIndex);
     });
     dropdownsContainer.appendChild(jobSelect);
     
@@ -162,7 +168,15 @@ function populatePartyMemberSettings() {
           secondarySelect.value = "";
         }
       }
+    } else {
+      // Explicitly ensure type dropdown is enabled for non-Ramza members
+      const typeSelect = document.getElementById(`member${i}_type`);
+      if (typeSelect) {
+        typeSelect.removeAttribute('disabled');
+      }
     }
+    // Update secondary enabled state for each member
+    updateSecondaryEnabledState(i);
   }
 }
 
@@ -175,6 +189,11 @@ function updateMemberDropdowns(memberIndex) {
   const secondaryContainer = secondaryLabel ? secondaryLabel.parentElement : null;
   
   if (!typeSelect || !jobSelect) return;
+  
+  // Ensure type dropdown is enabled for non-Ramza members
+  if (memberIndex > 0) {
+    typeSelect.removeAttribute('disabled');
+  }
   
   const type = typeSelect.value;
   
@@ -191,7 +210,7 @@ function updateMemberDropdowns(memberIndex) {
     // Add blank option at the top
     const blankOpt = document.createElement("option");
     blankOpt.value = "";
-    blankOpt.textContent = "(empty)";
+    blankOpt.textContent = "";
     jobSelect.appendChild(blankOpt);
     humanJobs.forEach(job => {
       const opt = document.createElement("option");
@@ -211,7 +230,7 @@ function updateMemberDropdowns(memberIndex) {
     // Add blank option at the top
     const blankSecondaryOpt = document.createElement("option");
     blankSecondaryOpt.value = "";
-    blankSecondaryOpt.textContent = "(empty)";
+    blankSecondaryOpt.textContent = "";
     secondarySelect.appendChild(blankSecondaryOpt);
     const noneOpt = document.createElement("option");
     noneOpt.value = "none";
@@ -229,7 +248,7 @@ function updateMemberDropdowns(memberIndex) {
     // Add blank option at the top
     const blankOpt = document.createElement("option");
     blankOpt.value = "";
-    blankOpt.textContent = "(empty)";
+    blankOpt.textContent = "";
     jobSelect.appendChild(blankOpt);
     monsterFamilies.forEach((family, index) => {
       const opt = document.createElement("option");
@@ -250,6 +269,42 @@ function updateMemberDropdowns(memberIndex) {
     updateMonsterTypeDropdown(memberIndex);
   }
   // If type is "" or "*", dropdowns remain hidden
+  
+  // Update secondary enabled state
+  updateSecondaryEnabledState(memberIndex);
+}
+
+// Update secondary dropdown enabled/disabled state
+function updateSecondaryEnabledState(memberIndex) {
+  const jobSelect = document.getElementById(`member${memberIndex}_job`);
+  const secondarySelect = document.getElementById(`member${memberIndex}_secondary`);
+  const typeSelect = document.getElementById(`member${memberIndex}_type`);
+  
+  if (!secondarySelect) return;
+  
+  // Check if Five Job Fiesta is selected
+  const specialMode = getSelectedRadio("specialMode");
+  const isFJF = specialMode === "fjf";
+  
+  // Check if this is a human/Ramza type or monster type
+  const type = typeSelect ? typeSelect.value : "";
+  const isHuman = type === "Ramza" || type === "Human";
+  const isMonster = type === "Monster";
+  
+  // For humans/Ramza: disable if Five Job Fiesta OR main job not selected
+  if (isHuman) {
+    const shouldDisable = isFJF || !jobSelect || jobSelect.value === "";
+    secondarySelect.disabled = shouldDisable;
+  }
+  // For monsters: enable if monster family is selected
+  else if (isMonster) {
+    const shouldDisable = !jobSelect || jobSelect.value === "";
+    secondarySelect.disabled = shouldDisable;
+  }
+  // For empty type or other: disable
+  else {
+    secondarySelect.disabled = true;
+  }
 }
 
 // Update monster type dropdown based on selected family
@@ -264,7 +319,7 @@ function updateMonsterTypeDropdown(memberIndex) {
   // Add blank option at the top
   const blankOpt = document.createElement("option");
   blankOpt.value = "";
-  blankOpt.textContent = "(empty)";
+  blankOpt.textContent = "";
   secondarySelect.appendChild(blankOpt);
   
   const familyIndex = parseInt(jobSelect.value, 10);
@@ -774,6 +829,11 @@ function populateDropdownsFromCharacters(characters, partySize) {
     const secondarySelect = document.getElementById(`member${i}_secondary`);
     if (!typeSelect) continue;
     
+    // Ensure type dropdown is enabled for non-Ramza members
+    if (i > 0) {
+      typeSelect.removeAttribute('disabled');
+    }
+    
     // Determine if it's a human or monster
     const isMonster = monsterFamilies.some(family => 
       family.members.includes(char.baseJob)
@@ -786,8 +846,16 @@ function populateDropdownsFromCharacters(characters, partySize) {
       );
       
       if (family) {
+        // Ensure type dropdown is enabled before setting value
+        if (i > 0) {
+          typeSelect.removeAttribute('disabled');
+        }
         typeSelect.value = "Monster";
         updateMemberDropdowns(i);
+        // Ensure it stays enabled after updateMemberDropdowns
+        if (i > 0) {
+          typeSelect.removeAttribute('disabled');
+        }
         
         const familyIndex = monsterFamilies.indexOf(family);
         jobSelect.value = String(familyIndex);
@@ -797,9 +865,17 @@ function populateDropdownsFromCharacters(characters, partySize) {
       }
     } else {
       // Human character
+      // Ensure type dropdown is enabled before setting value
+      if (i > 0) {
+        typeSelect.removeAttribute('disabled');
+      }
       const charType = char.characterType || (i === 0 ? "Ramza" : "Human");
       typeSelect.value = charType;
       updateMemberDropdowns(i);
+      // Ensure it stays enabled after updateMemberDropdowns
+      if (i > 0) {
+        typeSelect.removeAttribute('disabled');
+      }
       
       // Set values after dropdowns are populated
       if (jobSelect) {
@@ -818,6 +894,12 @@ function populateDropdownsFromCharacters(characters, partySize) {
           }
         }
       }
+    }
+    // Update secondary enabled state after populating
+    updateSecondaryEnabledState(i);
+    // Final check: ensure type dropdown is enabled for non-Ramza members
+    if (i > 0 && typeSelect) {
+      typeSelect.removeAttribute('disabled');
     }
   }
 }
@@ -953,13 +1035,19 @@ document.addEventListener("DOMContentLoaded", () => {
     populatePartyMemberSettings();
   });
 
-  // Set party size to 4 when Cavalry Challenge is selected
+  // Set party size to 4 when Cavalry Challenge is selected, and update secondary states
   const specialModeRadios = document.querySelectorAll('input[name="specialMode"]');
   specialModeRadios.forEach(radio => {
     radio.addEventListener("change", () => {
       if (radio.value === "cavalry") {
         partySizeSelect.value = "4";
         populatePartyMemberSettings();
+      } else {
+        // Update secondary enabled states for all members when mode changes
+        const currentPartySize = partySizeSelect.value === "5" ? 5 : parseInt(partySizeSelect.value, 10);
+        for (let i = 0; i < currentPartySize; i++) {
+          updateSecondaryEnabledState(i);
+        }
       }
     });
   });
