@@ -67,21 +67,20 @@ function populatePartyMemberSettings() {
   
   for (let i = 0; i < partySize; i++) {
     const memberDiv = document.createElement("div");
-    memberDiv.style.marginBottom = "12px";
-    memberDiv.style.paddingBottom = "12px";
-    memberDiv.style.borderBottom = i < partySize - 1 ? "1px solid rgba(174, 182, 207, 0.3)" : "none";
+    memberDiv.className = "party-member-row";
     
     const memberLabel = document.createElement("div");
-    memberLabel.style.marginBottom = "4px";
-    memberLabel.style.fontWeight = "600";
+    memberLabel.className = "party-member-label";
     memberLabel.textContent = i === 0 ? "Ramza" : `Party Member ${i + 1}`;
     memberDiv.appendChild(memberLabel);
+    
+    const dropdownsContainer = document.createElement("div");
+    dropdownsContainer.className = "party-member-dropdowns";
     
     // First dropdown: Type selection
     const typeSelect = document.createElement("select");
     typeSelect.id = `member${i}_type`;
-    typeSelect.style.marginRight = "8px";
-    typeSelect.style.marginBottom = "4px";
+    typeSelect.className = "member-type-select";
     
     if (i === 0) {
       // First member is always Ramza
@@ -102,13 +101,12 @@ function populatePartyMemberSettings() {
     }
     
     typeSelect.addEventListener("change", () => updateMemberDropdowns(i));
-    memberDiv.appendChild(typeSelect);
+    dropdownsContainer.appendChild(typeSelect);
     
     // Second dropdown: Job/Monster Family selection
     const jobSelect = document.createElement("select");
     jobSelect.id = `member${i}_job`;
-    jobSelect.style.marginRight = "8px";
-    jobSelect.style.marginBottom = "4px";
+    jobSelect.className = "member-job-select";
     jobSelect.style.display = "none";
     const memberIndex = i; // Capture for closure
     jobSelect.addEventListener("change", () => {
@@ -117,24 +115,27 @@ function populatePartyMemberSettings() {
         updateMonsterTypeDropdown(memberIndex);
       }
     });
-    memberDiv.appendChild(jobSelect);
+    dropdownsContainer.appendChild(jobSelect);
     
     // Third dropdown: Secondary job (for humans/Ramza) or Monster type (for monsters)
-    const secondarySelect = document.createElement("select");
-    secondarySelect.id = `member${i}_secondary`;
-    secondarySelect.style.marginRight = "8px";
-    secondarySelect.style.marginBottom = "4px";
-    secondarySelect.style.display = "none";
+    const secondaryContainer = document.createElement("span");
+    secondaryContainer.className = "member-secondary-container";
+    secondaryContainer.style.display = "none";
     
     const secondaryLabel = document.createElement("span");
+    secondaryLabel.className = "member-secondary-label";
     secondaryLabel.textContent = "Secondary: ";
-    secondaryLabel.style.marginRight = "4px";
-    secondaryLabel.style.display = "none";
     secondaryLabel.id = `member${i}_secondaryLabel`;
     
-    memberDiv.appendChild(secondaryLabel);
-    memberDiv.appendChild(secondarySelect);
+    const secondarySelect = document.createElement("select");
+    secondarySelect.id = `member${i}_secondary`;
+    secondarySelect.className = "member-secondary-select";
     
+    secondaryContainer.appendChild(secondaryLabel);
+    secondaryContainer.appendChild(secondarySelect);
+    dropdownsContainer.appendChild(secondaryContainer);
+    
+    memberDiv.appendChild(dropdownsContainer);
     partyMemberSettingsContainer.appendChild(memberDiv);
   }
   
@@ -146,19 +147,19 @@ function populatePartyMemberSettings() {
       const typeSelect = document.getElementById(`member${i}_type`);
       if (typeSelect && typeSelect.value === "Ramza") {
         const jobSelect = document.getElementById(`member${i}_job`);
-        const secondarySelect = document.getElementById(`member${i}_secondary`);
         const secondaryLabel = document.getElementById(`member${i}_secondaryLabel`);
+        const secondaryContainer = secondaryLabel ? secondaryLabel.parentElement : null;
         if (jobSelect) {
-          jobSelect.style.display = "inline-block";
+          jobSelect.style.display = "flex";
           // Clear any default selection so it randomizes
           jobSelect.value = "";
         }
-        if (secondarySelect) {
-          secondarySelect.style.display = "inline-block";
-          secondarySelect.value = "";
+        if (secondaryContainer) {
+          secondaryContainer.style.display = "inline-flex";
         }
-        if (secondaryLabel) {
-          secondaryLabel.style.display = "inline";
+        const secondarySelect = document.getElementById(`member${i}_secondary`);
+        if (secondarySelect) {
+          secondarySelect.value = "";
         }
       }
     }
@@ -171,6 +172,7 @@ function updateMemberDropdowns(memberIndex) {
   const jobSelect = document.getElementById(`member${memberIndex}_job`);
   const secondarySelect = document.getElementById(`member${memberIndex}_secondary`);
   const secondaryLabel = document.getElementById(`member${memberIndex}_secondaryLabel`);
+  const secondaryContainer = secondaryLabel ? secondaryLabel.parentElement : null;
   
   if (!typeSelect || !jobSelect) return;
   
@@ -179,12 +181,13 @@ function updateMemberDropdowns(memberIndex) {
   // Clear and populate job dropdown
   jobSelect.innerHTML = "";
   jobSelect.style.display = "none";
-  secondarySelect.style.display = "none";
-  secondaryLabel.style.display = "none";
+  if (secondaryContainer) {
+    secondaryContainer.style.display = "none";
+  }
   
   if (type === "Ramza" || type === "Human") {
     // Show human jobs
-    jobSelect.style.display = "inline-block";
+    jobSelect.style.display = "flex";
     humanJobs.forEach(job => {
       const opt = document.createElement("option");
       opt.value = job;
@@ -193,8 +196,12 @@ function updateMemberDropdowns(memberIndex) {
     });
     
     // Show secondary dropdown
-    secondarySelect.style.display = "inline-block";
-    secondaryLabel.style.display = "inline";
+    if (secondaryContainer) {
+      secondaryContainer.style.display = "inline-flex";
+    }
+    if (secondaryLabel) {
+      secondaryLabel.textContent = "Secondary: ";
+    }
     secondarySelect.innerHTML = "";
     const emptyOpt = document.createElement("option");
     emptyOpt.value = "";
@@ -208,7 +215,7 @@ function updateMemberDropdowns(memberIndex) {
     });
   } else if (type === "Monster") {
     // Show monster families in second dropdown
-    jobSelect.style.display = "inline-block";
+    jobSelect.style.display = "flex";
     monsterFamilies.forEach((family, index) => {
       const opt = document.createElement("option");
       opt.value = String(index);
@@ -217,9 +224,12 @@ function updateMemberDropdowns(memberIndex) {
     });
     
     // Show third dropdown with "*" and family members
-    secondarySelect.style.display = "inline-block";
-    secondaryLabel.style.display = "inline";
-    secondaryLabel.textContent = "Type: ";
+    if (secondaryContainer) {
+      secondaryContainer.style.display = "inline-flex";
+    }
+    if (secondaryLabel) {
+      secondaryLabel.textContent = "Type: ";
+    }
     
     // Update third dropdown based on selected family
     updateMonsterTypeDropdown(memberIndex);
