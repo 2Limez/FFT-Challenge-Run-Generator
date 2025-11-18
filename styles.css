@@ -1,19 +1,26 @@
 /* ====== Global layout / FFT-style look ====== */
-html, body {
+html {
   margin: 0;
   padding: 0;
+  height: 100%;
+  overflow-y: auto;
+}
+
+html, body {
   background: url('images/bg-tile.png') repeat;
   background-size: 22% auto;
   background-position: -20% 0;
   color: #f4f8ff;
   font-family: "Trebuchet MS", "Verdana", sans-serif;
-  height: 100%;
 }
 
 body {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .screen {
@@ -21,6 +28,7 @@ body {
   max-width: 100%;
   padding: 16px;
   box-sizing: border-box;
+  margin: 0 auto;
 }
 
 .top-bar {
@@ -194,6 +202,24 @@ body {
 @media (max-width: 900px) {
   .main-panel {
     grid-template-columns: 1fr;
+  }
+  
+  body {
+    padding: 10px;
+  }
+  
+  .screen {
+    padding: 12px;
+  }
+}
+
+@media (max-height: 800px) {
+  body {
+    padding: 10px;
+  }
+  
+  .screen {
+    padding: 12px;
   }
 }
 

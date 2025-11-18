@@ -42,66 +42,27 @@
         </div>
       </div>
 
-      <!-- Special Settings -->
+      <!-- Challenge Mode -->
       <div class="panel">
-        <div class="panel-title">Special Settings</div>
+        <div class="panel-title">Challenge Mode</div>
         <div class="panel-content">
-          <label class="inline">
-            <input type="radio" name="specialMode" value="none" checked>
-            None
+          <div class="small" style="margin-bottom: 6px;"><em>Must select one of these</em></div>
+          <label>
+            <input type="radio" name="specialMode" value="normal" checked>
+            Normal (default)
           </label>
           <label>
             <input type="radio" name="specialMode" value="monstrous">
-            Monstrous &mdash; Only monsters (Ramza excepted)
+            Monstrous: Can only use monsters (except for Ramza)
           </label>
           <label>
             <input type="radio" name="specialMode" value="fjf">
-            Four Job Fiesta &mdash; 4 random jobs only
+            Five Job Fiesta: If selected, randomly select 5 jobs. These are the only jobs allowed for the run. Characters can mix/match abilities and change jobs
           </label>
-
-          <div class="hint">
-            Only one special setting may be active at a time.
-          </div>
-        </div>
-      </div>
-
-      <!-- Job Settings -->
-      <div class="panel">
-        <div class="panel-title">Job Settings</div>
-        <div class="panel-content">
-          <div>
-            <strong>Job Scope:</strong>
-          </div>
-          <label class="inline">
-            <input type="radio" name="jobScope" value="human" checked>
-            Human Jobs
-          </label>
-          <label class="inline">
-            <input type="radio" name="jobScope" value="monster">
-            Monster Families
-          </label>
-
-          <div style="margin-top:6px;">
-            <strong>Job Limitation:</strong>
-          </div>
           <label>
-            <select id="jobLimitation"></select>
+            <input type="radio" name="specialMode" value="cavalry">
+            Cavalry Challenge: you get 2 human units and 2 chocobos - the human characters must mount the birds on their first turn- no other characters allowed.
           </label>
-          <div class="hint" id="jobLimitationHint"></div>
-
-          <div style="margin-top:6px;">
-            <strong>Job Type:</strong>
-          </div>
-          <label>
-            <select id="jobType">
-              <!-- Filled by JS based on scope -->
-            </select>
-          </label>
-
-          <div class="hint">
-            For job limitations that require unlocking, you may play normally until <strong>Mandalia Plains</strong>,
-            then swap into your assigned jobs and remain within the restriction for the rest of the run.
-          </div>
         </div>
       </div>
 
@@ -159,6 +120,13 @@
     <!-- RIGHT: Output -->
     <div class="right-column">
       <div class="panel">
+        <div class="panel-title">Party Member Settings</div>
+        <div class="panel-content" id="partyMemberSettings">
+          <!-- Will be populated by JavaScript based on party size -->
+        </div>
+      </div>
+
+      <div class="panel">
         <div class="panel-title">Run Summary</div>
         <div class="panel-content results-panel" id="results">
           <div class="hint">
@@ -181,7 +149,10 @@
               <strong>Monstrous</strong>: Only monsters may be used, except Ramza.
             </li>
             <li>
-              <strong>Four Job Fiesta</strong>: Only four randomly selected jobs are legal; units may mix abilities among those four.
+              <strong>Five Job Fiesta</strong>: Only five randomly selected jobs are legal; units may mix abilities among those five and change jobs.
+            </li>
+            <li>
+              <strong>Cavalry Challenge</strong>: Party consists of 2 human units and 2 chocobos. Human characters must mount the birds on their first turn.
             </li>
           </ul>
         </div>
