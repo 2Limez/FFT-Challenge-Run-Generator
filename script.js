@@ -46,6 +46,7 @@ function getSelectedRadio(name) {
 
 // ====== Party Member Settings UI ======
 let partyMemberSettingsContainer;
+let partyMemberSettingsPanel;
 
 // Get all monster types as a flat list
 function getAllMonsterTypes() {
@@ -1045,9 +1046,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initialize DOM element references
   partyMemberSettingsContainer = document.getElementById("partyMemberSettings");
   resultsEl = document.getElementById("results");
+  partyMemberSettingsPanel = document.getElementById("partyMemberSettingsPanel");
 
   // Initialize party member settings
   populatePartyMemberSettings();
+  
+  // Check initial mode and set panel visibility
+  const initialMode = getSelectedRadio("specialMode");
+  if (initialMode === "fjf") {
+    if (partyMemberSettingsPanel) {
+      partyMemberSettingsPanel.style.display = "none";
+    }
+  }
 
   // Update party member settings when party size changes
   const partySizeSelect = document.getElementById("partySize");
@@ -1055,14 +1065,30 @@ document.addEventListener("DOMContentLoaded", () => {
     populatePartyMemberSettings();
   });
 
-  // Set party size to 4 when Cavalry Challenge is selected, and update secondary states
+  // Handle special mode changes
   const specialModeRadios = document.querySelectorAll('input[name="specialMode"]');
   specialModeRadios.forEach(radio => {
     radio.addEventListener("change", () => {
       if (radio.value === "cavalry") {
         partySizeSelect.value = "4";
         populatePartyMemberSettings();
+        // Show party member settings panel
+        if (partyMemberSettingsPanel) {
+          partyMemberSettingsPanel.style.display = "";
+        }
+      } else if (radio.value === "fjf") {
+        // Five Job Fiesta: force party size to 5 and hide party member settings
+        partySizeSelect.value = "5";
+        populatePartyMemberSettings();
+        // Hide party member settings panel
+        if (partyMemberSettingsPanel) {
+          partyMemberSettingsPanel.style.display = "none";
+        }
       } else {
+        // Other modes: show party member settings panel
+        if (partyMemberSettingsPanel) {
+          partyMemberSettingsPanel.style.display = "";
+        }
         // Update secondary enabled states for all members when mode changes
         const currentPartySize = partySizeSelect.value === "5" ? 5 : parseInt(partySizeSelect.value, 10);
         for (let i = 0; i < currentPartySize; i++) {
