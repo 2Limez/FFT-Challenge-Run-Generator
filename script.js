@@ -298,7 +298,7 @@ function generateRun() {
           name: i === 0 ? "Ramza" : "Ally " + (i + 1),
           baseJob,
           fiestaJobs,
-          note: "Five Job Fiesta pool"
+          note: ""
         });
       }
     } else {
@@ -308,7 +308,7 @@ function generateRun() {
           name: i === 0 ? "Ramza" : "Ally " + (i + 1),
           baseJob,
           fiestaJobs,
-          note: "Five Job Fiesta pool"
+          note: ""
         });
       }
     }
@@ -321,7 +321,7 @@ function generateRun() {
       unanimous,
       specialMode,
       scope: "human",
-      limitation,
+      limitation: null,
       crystals,
       shops,
       randomBattles,
@@ -364,7 +364,7 @@ function generateRun() {
       unanimous: false,
       specialMode,
       scope: "human",
-      limitation,
+      limitation: null,
       crystals,
       shops,
       randomBattles,
@@ -415,60 +415,77 @@ function generateRun() {
 
   if (specialMode === "monstrous") {
     // Monstrous: monsters only, except Ramza
-    const familyIndex = Math.floor(Math.random() * monsterFamilies.length);
-    const family = monsterFamilies[familyIndex];
-
     // Ramza gets a human job
     const ramzaJob = randomChoice(humanJobs);
+    characters.push({
+      name: "Ramza",
+      baseJob: ramzaJob,
+      note: "Human (Monstrous exception)"
+    });
 
     if (unanimous) {
-      // One roll for Ramza, one for the monster party as a whole
-      characters.push({
-        name: "Ramza",
-        baseJob: ramzaJob,
-        note: "Human (Monstrous exception)"
-      });
+      // One roll for the monster party as a whole
+      const familyIndex = Math.floor(Math.random() * monsterFamilies.length);
+      const family = monsterFamilies[familyIndex];
       for (let i = 1; i < maxSlots; i++) {
         const member = randomChoice(family.members);
         characters.push({
           name: "Monster " + (i + 1),
           baseJob: member,
           members: family.members.slice(),
-          note: "Any monster within family"
+          family: family.name,
+          note: ""
         });
       }
+
+      // Populate dropdowns with generated values
+      populateDropdownsFromCharacters(characters, partySize);
+
+      renderResults({
+        partySize,
+        unanimous,
+        specialMode,
+        scope: "monster",
+        limitation: null,
+        crystals,
+        shops,
+        randomBattles,
+        family,
+        characters
+      });
     } else {
-      characters.push({
-        name: "Ramza",
-        baseJob: ramzaJob,
-        note: "Human (Monstrous exception)"
-      });
+      // Each monster gets its own family roll
+      const families = [];
       for (let i = 1; i < maxSlots; i++) {
+        const familyIndex = Math.floor(Math.random() * monsterFamilies.length);
+        const family = monsterFamilies[familyIndex];
+        families.push(family);
         const member = randomChoice(family.members);
         characters.push({
           name: "Monster " + (i + 1),
           baseJob: member,
           members: family.members.slice(),
+          family: family.name,
           note: "Any monster within family"
         });
       }
+
+      // Populate dropdowns with generated values
+      populateDropdownsFromCharacters(characters, partySize);
+
+      renderResults({
+        partySize,
+        unanimous,
+        specialMode,
+        scope: "monster",
+        limitation: null,
+        crystals,
+        shops,
+        randomBattles,
+        families,
+        characters
+      });
     }
-
-    // Populate dropdowns with generated values
-    populateDropdownsFromCharacters(characters, partySize);
-
-    renderResults({
-      partySize,
-      unanimous,
-      specialMode,
-      scope: "monster",
-      limitation,
-      crystals,
-      shops,
-      randomBattles,
-      family,
-      characters
-    });
     return;
   }
 
@@ -624,6 +641,7 @@ function renderResults(data) {
     randomBattles,
     fiestaJobs,
     family,
+    families,
     characters
   } = data;
 
@@ -674,25 +692,21 @@ function renderResults(data) {
     html += `</ul>`;
   }
 
-  if (scope === "monster" && family) {
-    html += `<div class="results-section-title">Monster Family</div>`;
-    html += `<div class="row"><span class="label">Family</span><span class="value">${family.name}</span></div>`;
-    html += `<div class="small" style="margin-top:4px;">Members: ${family.members.join(", ")}</div>`;
+  if (specialMode !== "fjf") {
+    html += `<div class="results-section-title">Party</div>`;
+    html += `<ul class="job-list">`;
+    characters.forEach(ch => {
+      let line = `<strong>${ch.name}</strong>: ${ch.baseJob}`;
+      if (ch.secondary) {
+        line += ` / ${ch.secondary}`;
+      }
+      if (ch.note) {
+        line += ` <span class="small">(${ch.note})</span>`;
+      }
+      html += `<li>${line}</li>`;
+    });
+    html += `</ul>`;
   }
-
-  html += `<div class="results-section-title">Party</div>`;
-  html += `<ul class="job-list">`;
-  characters.forEach(ch => {
-    let line = `<strong>${ch.name}</strong>: ${ch.baseJob}`;
-    if (ch.secondary) {
-      line += ` / ${ch.secondary}`;
-    }
-    if (ch.note) {
-      line += ` <span class="small">(${ch.note})</span>`;
-    }
-    html += `<li>${line}</li>`;
-  });
-  html += `</ul>`;
 
   html += `<div class="hint" style="margin-top:6px;">Play normally until you reach <strong>Mandalia Plains</strong>, unlock the required jobs, then switch into your assigned configuration for the remainder of the run.</div>`;
 
@@ -727,7 +741,21 @@ document.addEventListener("DOMContentLoaded", () => {
   populatePartyMemberSettings();
 
   // Update party member settings when party size changes
-  document.getElementById("partySize").addEventListener("change", populatePartyMemberSettings);
+  const partySizeSelect = document.getElementById("partySize");
+  partySizeSelect.addEventListener("change", () => {
+    populatePartyMemberSettings();
+  });
+
+  // Set party size to 4 when Cavalry Challenge is selected
+  const specialModeRadios = document.querySelectorAll('input[name="specialMode"]');
+  specialModeRadios.forEach(radio => {
+    radio.addEventListener("change", () => {
+      if (radio.value === "cavalry") {
+        partySizeSelect.value = "4";
+        populatePartyMemberSettings();
+      }
+    });
+  });
 
   document.getElementById("btnRandomize").addEventListener("click", generateRun);
   document.getElementById("btnReset").addEventListener("click", resetForm);
