@@ -1,3 +1,14 @@
+/* ====== FFT Style Variables ====== */
+:root {
+  --fft-bg-top:    #f5efe3;
+  --fft-bg-bottom: #e0d4c0;
+  --fft-border:    #b7aa93;
+  --fft-inner:     rgba(255, 255, 255, 0.45);
+  --fft-shadow:    rgba(0, 0, 0, 0.55);
+  --fft-header-bg-top:    #d9ceb7;
+  --fft-header-bg-bottom: #c4b79f;
+}
+
 /* ====== Font Face ====== */
 @font-face {
   font-family: "Badr Bold";
@@ -20,7 +31,7 @@ html, body {
   background: url('images/bg-tile.png') repeat;
   background-size: 22% auto;
   background-position: -20% 0;
-  color: #f4f8ff;
+  color: #221b11;
   font-family: "Badr Bold", "Trebuchet MS", "Verdana", sans-serif;
 }
 
@@ -44,9 +55,10 @@ body {
 }
 
 .top-bar {
-  background: linear-gradient(to bottom, #24355c, #151c33);
-  border: 2px solid #c0c8e0;
+  background: linear-gradient(to bottom, var(--fft-header-bg-top), var(--fft-header-bg-bottom));
+  border: 1px solid var(--fft-border);
   border-bottom: 0;
+  border-radius: 6px 6px 0 0;
   padding: 8px 16px;
   text-transform: uppercase;
   letter-spacing: 0.15em;
@@ -54,7 +66,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 0 12px rgba(0,0,0,0.8);
+  box-shadow: 0 0 0 1px var(--fft-inner) inset;
+  color: #221b11;
 }
 
 .top-bar span.label {
@@ -66,14 +79,18 @@ body {
 }
 
 .main-panel {
-  background: linear-gradient(to bottom, #182236, #070b14);
-  border: 2px solid #c0c8e0;
+  background: linear-gradient(to bottom, var(--fft-bg-top), var(--fft-bg-bottom));
+  border: 1px solid var(--fft-border);
   border-top: 0;
+  border-radius: 0 0 6px 6px;
   padding: 16px;
   display: grid;
   grid-template-columns: 1.2fr 1.3fr;
   gap: 12px;
-  box-shadow: 0 10px 22px rgba(0,0,0,0.9);
+  box-shadow:
+    0 0 0 1px var(--fft-inner) inset,
+    0 6px 18px var(--fft-shadow);
+  color: #221b11;
 }
 
 .left-column,
@@ -83,24 +100,62 @@ body {
   gap: 12px;
 }
 
-.panel {
-  background: linear-gradient(to bottom, #243350, #111826);
-  border: 2px solid #aeb6cf;
-  padding: 10px 12px;
+/* Base FFT panel */
+.fft-panel {
+  background: linear-gradient(to bottom, var(--fft-bg-top), var(--fft-bg-bottom));
+  border: 1px solid var(--fft-border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  box-shadow:
+    0 0 0 1px var(--fft-inner) inset,
+    0 6px 18px var(--fft-shadow);
   position: relative;
+  color: #221b11;
+}
+
+/* FFT panel header */
+.fft-panel__header {
+  background: linear-gradient(to bottom,
+    var(--fft-header-bg-top),
+    var(--fft-header-bg-bottom)
+  );
+  border-radius: 4px 4px 0 0;
+  padding: 4px 8px;
+  margin: -10px -14px 8px -14px; /* let header touch panel edges */
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(0,0,0,0.35);
+}
+
+/* Legacy panel class - now uses FFT style */
+.panel {
+  background: linear-gradient(to bottom, var(--fft-bg-top), var(--fft-bg-bottom));
+  border: 1px solid var(--fft-border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  box-shadow:
+    0 0 0 1px var(--fft-inner) inset,
+    0 6px 18px var(--fft-shadow);
+  position: relative;
+  color: #221b11;
 }
 
 .panel-title {
-  position: absolute;
-  top: -11px;
-  left: 10px;
-  padding: 0 6px;
-  font-size: 11px;
+  background: linear-gradient(to bottom,
+    var(--fft-header-bg-top),
+    var(--fft-header-bg-bottom)
+  );
+  border-radius: 4px 4px 0 0;
+  padding: 4px 8px;
+  margin: -10px -14px 8px -14px;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  background: #141a2b;
-  border-left: 1px solid #c0c8e0;
-  border-right: 1px solid #c0c8e0;
+  border-bottom: 1px solid rgba(0,0,0,0.35);
+  position: relative;
+  top: 0;
+  left: 0;
 }
 
 .panel-content {
@@ -161,6 +216,39 @@ body {
 .member-secondary-label {
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+/* FFT list styles */
+.fft-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fft-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.14);
+}
+
+.fft-list li:last-child {
+  border-bottom: none;
+}
+
+/* Small right-aligned numeric column */
+.fft-num {
+  min-width: 3em;
+  text-align: right;
+}
+
+/* Tiny caption text at the bottom */
+.fft-caption {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  text-align: center;
+  opacity: 0.8;
 }
 
 .panel-content label {
