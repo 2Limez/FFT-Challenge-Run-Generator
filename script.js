@@ -363,6 +363,44 @@ function generateRun() {
     return;
   }
 
+  if (specialMode === "humansOnly") {
+    // Humans Only: only human characters allowed
+    for (let i = 0; i < maxSlots; i++) {
+      const name = i === 0 ? "Ramza" : `Party Member ${i}`;
+      const baseJob = randomChoice(humanJobs);
+      let secondary = null;
+      
+      // Randomly assign secondary job 30% of the time
+      if (Math.random() < 0.3) {
+        secondary = randomChoice(humanJobs.filter(j => j !== baseJob));
+      }
+      
+      characters.push({
+        name,
+        baseJob,
+        secondary: secondary || null,
+        characterType: i === 0 ? "Ramza" : "Human",
+        note: secondary ? `Secondary: ${secondary}` : null
+      });
+    }
+
+    // Populate dropdowns with generated values
+    populateDropdownsFromCharacters(characters, partySize);
+
+    renderResults({
+      partySize,
+      unanimous,
+      specialMode,
+      scope: "human",
+      limitation: null,
+      crystals,
+      shops,
+      randomBattles,
+      characters
+    });
+    return;
+  }
+
   if (specialMode === "monstrous") {
     // Monstrous: monsters only, except Ramza
     const familyIndex = Math.floor(Math.random() * monsterFamilies.length);
@@ -578,6 +616,7 @@ function renderResults(data) {
     if (specialMode === "monstrous") return "Monstrous";
     if (specialMode === "fjf") return "Five Job Fiesta";
     if (specialMode === "cavalry") return "Cavalry Challenge";
+    if (specialMode === "humansOnly") return "Humans Only";
     return "Normal";
   })();
 
