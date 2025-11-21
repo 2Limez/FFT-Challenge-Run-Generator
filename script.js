@@ -986,16 +986,18 @@ const Renderer = {
 // SETTINGS MODULE
 // ============================================================================
 const Settings = {
-  randomize() {
+  randomize(skipPartySize = false) {
     const partySizeSelect = document.getElementById("partySize");
     
-    const partySizeOptions = ["1", "2", "3", "4", "5"];
-    const randomPartySize = Utils.randomChoice(partySizeOptions);
-    const oldValue = partySizeSelect.value;
-    partySizeSelect.value = randomPartySize;
-    
-    if (oldValue !== randomPartySize || true) {
-      partySizeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    if (!skipPartySize) {
+      const partySizeOptions = ["1", "2", "3", "4", "5"];
+      const randomPartySize = Utils.randomChoice(partySizeOptions);
+      const oldValue = partySizeSelect.value;
+      partySizeSelect.value = randomPartySize;
+      
+      if (oldValue !== randomPartySize || true) {
+        partySizeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      }
     }
     
     const shopsOptions = ["Normal", "Items Only", "Strict"];
@@ -1017,8 +1019,14 @@ const Settings = {
     
     PartyMemberUI.populate();
     Renderer.resultsEl.innerHTML = `<div class="hint">
-      Configure options on the left, then select <strong>Randomize Run</strong> to generate a challenge.
+      Configure options on the left, then select <strong>Randomize All</strong> to generate a challenge.
     </div>`;
+  },
+
+  resetPartyMembers() {
+    const partySize = Utils.getPartySize();
+    PartyMemberUI.clearAll(partySize);
+    RunGenerator.generate();
   }
 };
 
@@ -1114,9 +1122,38 @@ document.addEventListener("DOMContentLoaded", () => {
     RunGenerator.generate(true);
   });
   
-  document.getElementById("btnReset").addEventListener("click", Settings.reset);
+  document.getElementById("btnReset").addEventListener("click", Settings.resetPartyMembers);
   
   // Initial randomization and render
-  Settings.randomize();
+  // Randomize challenge mode first on page load
+  const challengeModeOptions = ["normal", "humansOnly", "monstrous", "fjf", "cavalry"];
+  const randomChallengeMode = Utils.randomChoice(challengeModeOptions);
+  const initialModeRadio = document.querySelector(`input[name="specialMode"][value="${randomChallengeMode}"]`);
+  if (initialModeRadio) {
+    initialModeRadio.checked = true;
+    // Manually apply mode-specific settings before dispatching event
+    if (randomChallengeMode === "cavalry") {
+      partySizeSelect.value = "4";
+      PartyMemberUI.populate();
+      if (partyMemberSettingsPanel) partyMemberSettingsPanel.style.display = "";
+    } else if (randomChallengeMode === "fjf") {
+      partySizeSelect.value = "5";
+      PartyMemberUI.populate();
+      if (partyMemberSettingsPanel) partyMemberSettingsPanel.style.display = "none";
+    } else {
+      if (partyMemberSettingsPanel) partyMemberSettingsPanel.style.display = "";
+      // Update secondary enabled states for other modes
+      const currentPartySize = Utils.getPartySize();
+      for (let i = 0; i < currentPartySize; i++) {
+        PartyMemberUI.updateSecondaryEnabledState(i);
+      }
+    }
+    // Dispatch event to trigger any other handlers
+    initialModeRadio.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  
+  // Randomize settings, but skip party size if mode requires a specific size
+  const skipPartySize = randomChallengeMode === "cavalry" || randomChallengeMode === "fjf";
+  Settings.randomize(skipPartySize);
   updateRunSummary();
 });
