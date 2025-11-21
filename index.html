@@ -59,43 +59,40 @@
           </label>
 
           <div style="margin-top:6px;">
-            <strong>Crystals:</strong>
-          </div>
-          <label class="inline">
-            <input type="radio" name="crystals" value="Normal" checked> Normal
-          </label>
-          <label class="inline">
-            <input type="radio" name="crystals" value="Only Crystals"> Only Crystals
-          </label>
-          <label>
-            <input type="radio" name="crystals" value="No Crystals"> No Crystals
-          </label>
-
-          <div style="margin-top:6px;">
             <strong>Shops:</strong>
+            <label class="inline">
+              <input type="radio" name="shops" value="Normal" checked> Normal
+            </label>
+            <label class="inline">
+              <input type="radio" name="shops" value="Items Only"> Items Only
+            </label>
+            <label class="inline">
+              <input type="radio" name="shops" value="Strict"> Strict
+            </label>
           </div>
-          <label class="inline">
-            <input type="radio" name="shops" value="Normal" checked> Normal
-          </label>
-          <label class="inline">
-            <input type="radio" name="shops" value="Items Only"> Items Only
-          </label>
-          <label>
-            <input type="radio" name="shops" value="Strict"> Strict
-          </label>
 
           <div style="margin-top:6px;">
             <strong>Random Battles:</strong>
+            <label class="inline">
+              <input type="radio" name="randomBattles" value="Normal" checked> Normal
+            </label>
+            <label class="inline">
+              <input type="radio" name="randomBattles" value="Forbidden"> Forbidden
+            </label>
+            <label class="inline">
+              <input type="radio" name="randomBattles" value="Required"> Required
+            </label>
           </div>
-          <label class="inline">
-            <input type="radio" name="randomBattles" value="Normal" checked> Normal
-          </label>
-          <label class="inline">
-            <input type="radio" name="randomBattles" value="Forbidden"> Forbidden
-          </label>
-          <label>
-            <input type="radio" name="randomBattles" value="Required"> Required
-          </label>
+
+          <div style="margin-top:6px;">
+            <strong>Secondary Jobs:</strong>
+            <label class="inline">
+              <input type="radio" name="allowSecondary" value="allowed" checked> Allowed
+            </label>
+            <label class="inline">
+              <input type="radio" name="allowSecondary" value="disallowed"> Disallowed
+            </label>
+          </div>
 
           <div class="buttons">
             <button class="btn" id="btnRandomize">Randomize Run</button>
@@ -128,7 +125,7 @@
         <div class="panel-content small">
           <ul style="margin-top:0; padding-left:16px;">
             <li>
-              Story special characters (outside of temporary guests) are prohibited due to how late they join.
+              Story special characters (outside of temporary guests) are prohibited.
             </li>
             <li>
               Consider keeping a save at <strong>Mandalia Plains</strong> with all jobs unlocked to quickly start new runs.

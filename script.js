@@ -307,20 +307,24 @@ function updateSecondaryEnabledState(memberIndex) {
   const specialMode = getSelectedRadio("specialMode");
   const isFJF = specialMode === "fjf";
   
+  // Check if secondary jobs are allowed
+  const allowSecondary = getSelectedRadio("allowSecondary");
+  const secondaryAllowed = allowSecondary === "allowed";
+  
   // Check if this is a human/Ramza type or monster type
   const type = typeSelect ? typeSelect.value : "";
   const isHuman = type === "Ramza" || type === "Human";
   const isMonster = type === "Monster";
   
-  // For humans/Ramza: hide entirely if Five Job Fiesta, otherwise disable if main job not selected
+  // For humans/Ramza: hide entirely if Five Job Fiesta or secondary jobs disallowed, otherwise disable if main job not selected
   if (isHuman) {
-    if (isFJF) {
-      // Hide secondary dropdown entirely for Five Job Fiesta
+    if (isFJF || !secondaryAllowed) {
+      // Hide secondary dropdown entirely for Five Job Fiesta or if secondary jobs are disallowed
       if (secondaryContainer) {
         secondaryContainer.style.display = "none";
       }
     } else {
-      // Show secondary dropdown if not FJF
+      // Show secondary dropdown if not FJF and secondary jobs are allowed
       if (secondaryContainer) {
         secondaryContainer.style.display = "inline-flex";
       }
@@ -328,7 +332,7 @@ function updateSecondaryEnabledState(memberIndex) {
       secondarySelect.disabled = shouldDisable;
     }
   }
-  // For monsters: enable if monster family is selected
+  // For monsters: enable if monster family is selected (monsters don't use secondary jobs, they use monster types)
   else if (isMonster) {
     const shouldDisable = !jobSelect || jobSelect.value === "";
     secondarySelect.disabled = shouldDisable;
@@ -446,7 +450,11 @@ function getCharacterFromDropdowns(i, specialMode = null) {
   }
   
   // Get secondary - randomize only if blank (for humans/Ramza)
-  if ((characterType === "Ramza" || characterType === "Human") && secondarySelect) {
+  // Check if secondary jobs are allowed
+  const allowSecondary = getSelectedRadio("allowSecondary");
+  const secondaryAllowed = allowSecondary === "allowed";
+  
+  if ((characterType === "Ramza" || characterType === "Human") && secondarySelect && secondaryAllowed) {
     const secondaryValue = secondarySelect.value;
     if (secondaryValue === "" || secondaryValue === "none") {
       // Randomize secondary if blank
@@ -459,6 +467,9 @@ function getCharacterFromDropdowns(i, specialMode = null) {
     } else if (secondaryValue !== "") {
       secondary = secondaryValue === "none" ? null : secondaryValue;
     }
+  } else {
+    // Secondary jobs not allowed, set to null
+    secondary = null;
   }
   
   // For monsters, check if secondary is blank and store family info
@@ -527,9 +538,9 @@ function generateRun(forceRandomize = false) {
   // Special / scope
   const specialMode = getSelectedRadio("specialMode");
 
-  const crystals = getSelectedRadio("crystals");
   const shops = getSelectedRadio("shops");
   const randomBattles = getSelectedRadio("randomBattles");
+  const allowSecondary = getSelectedRadio("allowSecondary");
 
   // Build job assignments
   const characters = [];
@@ -556,15 +567,21 @@ function generateRun(forceRandomize = false) {
         baseJob = fiestaJobs[i % fiestaJobs.length];
       }
       
-      // Check if secondary is already set
-      if (secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "none" && fiestaJobs.includes(secondarySelect.value)) {
+      // Check if secondary jobs are allowed
+      const allowSecondary = getSelectedRadio("allowSecondary");
+      const secondaryAllowed = allowSecondary === "allowed";
+      
+      // Check if secondary is already set (only if secondary jobs are allowed)
+      if (secondaryAllowed && secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "none" && fiestaJobs.includes(secondarySelect.value)) {
         secondary = secondarySelect.value;
-      } else if (secondarySelect && (secondarySelect.value === "" || secondarySelect.value === "none")) {
-        // Randomize secondary if blank
+      } else if (secondaryAllowed && secondarySelect && (secondarySelect.value === "" || secondarySelect.value === "none")) {
+        // Randomize secondary if blank (only if secondary jobs are allowed)
         const availableJobs = fiestaJobs.filter(j => j !== baseJob);
         if (availableJobs.length > 0) {
           secondary = randomChoice(availableJobs);
         }
+      } else {
+        secondary = null;
       }
       
       characters.push({
@@ -584,9 +601,9 @@ function generateRun(forceRandomize = false) {
       specialMode,
       scope: "human",
       limitation: null,
-      crystals,
       shops,
       randomBattles,
+      allowSecondary,
       fiestaJobs,
       characters
     });
@@ -612,14 +629,20 @@ function generateRun(forceRandomize = false) {
         baseJob = randomChoice(humanJobs);
       }
       
-      if (secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "none") {
+      // Check if secondary jobs are allowed
+      const allowSecondary = getSelectedRadio("allowSecondary");
+      const secondaryAllowed = allowSecondary === "allowed";
+      
+      if (secondaryAllowed && secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "none") {
         secondary = secondarySelect.value;
-      } else if (secondarySelect && (secondarySelect.value === "" || secondarySelect.value === "none")) {
-        // Randomize secondary if blank
+      } else if (secondaryAllowed && secondarySelect && (secondarySelect.value === "" || secondarySelect.value === "none")) {
+        // Randomize secondary if blank (only if secondary jobs are allowed)
         const availableJobs = humanJobs.filter(j => j !== baseJob);
         if (availableJobs.length > 0) {
           secondary = randomChoice(availableJobs);
         }
+      } else {
+        secondary = null;
       }
       
       characters.push({
@@ -675,9 +698,9 @@ function generateRun(forceRandomize = false) {
       specialMode,
       scope: "human",
       limitation: null,
-      crystals,
       shops,
       randomBattles,
+      allowSecondary,
       characters
     });
     return;
@@ -699,14 +722,20 @@ function generateRun(forceRandomize = false) {
         baseJob = randomChoice(humanJobs);
       }
       
-      if (secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "none") {
+      // Check if secondary jobs are allowed
+      const allowSecondary = getSelectedRadio("allowSecondary");
+      const secondaryAllowed = allowSecondary === "allowed";
+      
+      if (secondaryAllowed && secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "none") {
         secondary = secondarySelect.value;
-      } else if (secondarySelect && (secondarySelect.value === "" || secondarySelect.value === "none")) {
-        // Randomize secondary if blank
+      } else if (secondaryAllowed && secondarySelect && (secondarySelect.value === "" || secondarySelect.value === "none")) {
+        // Randomize secondary if blank (only if secondary jobs are allowed)
         const availableJobs = humanJobs.filter(j => j !== baseJob);
         if (availableJobs.length > 0) {
           secondary = randomChoice(availableJobs);
         }
+      } else {
+        secondary = null;
       }
       
       characters.push({
@@ -726,9 +755,9 @@ function generateRun(forceRandomize = false) {
       specialMode,
       scope: "human",
       limitation: null,
-      crystals,
       shops,
       randomBattles,
+      allowSecondary,
       characters
     });
     return;
@@ -814,9 +843,9 @@ function generateRun(forceRandomize = false) {
       specialMode,
       scope: "monster",
       limitation: null,
-      crystals,
       shops,
       randomBattles,
+      allowSecondary,
       families,
       characters
     });
@@ -839,9 +868,9 @@ function generateRun(forceRandomize = false) {
     specialMode,
     scope: "mixed",
     limitation: null,
-    crystals,
     shops,
     randomBattles,
+    allowSecondary,
     characters
   });
 }
@@ -956,9 +985,9 @@ function renderResults(data) {
     specialMode,
     scope,
     limitation,
-    crystals,
     shops,
     randomBattles,
+    allowSecondary,
     fiestaJobs,
     family,
     families,
@@ -997,10 +1026,34 @@ function renderResults(data) {
     html += `<div class="row"><span class="label">Job Limitation</span><span class="value">${limitationLabel}</span></div>`;
   }
 
-  html += `<div class="results-section-title">Run Rules</div>`;
-  html += `<div class="row"><span class="label">Crystals</span><span class="value">${crystals}</span></div>`;
-  html += `<div class="row"><span class="label">Shops</span><span class="value">${shops}</span></div>`;
-  html += `<div class="row"><span class="label">Random Battles</span><span class="value">${randomBattles}</span></div>`;
+  // Only show Run Rules section if there are rules with descriptions
+  const hasShopsRule = shops === "Items Only" || shops === "Strict";
+  const hasRandomBattlesRule = randomBattles === "Forbidden" || randomBattles === "Required";
+  
+  if (hasShopsRule || hasRandomBattlesRule) {
+    html += `<div class="results-section-title">Run Rules</div>`;
+    
+    // if (hasShopsRule) {
+    //   html += `<div class="row"><span class="label">Shops</span><span class="value">${shops}</span></div>`;
+    // }
+    // if (hasRandomBattlesRule) {
+    //   html += `<div class="row"><span class="label">Random Battles</span><span class="value">${randomBattles}</span></div>`;
+    // }
+    
+    // Add info about currently selected settings only
+    // html += `<div class="hint" style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.2); font-size:13px;">`;
+    if (shops === "Items Only") {
+      html += `<div style="margin-bottom:8px;"><strong>Shops:</strong> You cannot buy equipment from shops (except for poaches).</div>`;
+    } else if (shops === "Strict") {
+      html += `<div style="margin-bottom:8px;"><strong>Shops:</strong> You cannot buy anything from shops (except for poaches).</div>`;
+    }
+    if (randomBattles === "Forbidden") {
+      html += `<div style="margin-bottom:8px;"><strong>Random Battles:</strong> You must skip all random battles.</div>`;
+    } else if (randomBattles === "Required") {
+      html += `<div><strong>Random Battles:</strong> You must fight all random battles.</div>`;
+    }
+    html += `</div>`;
+  }
 
   if (specialMode === "fjf" && fiestaJobs) {
     html += `<div class="results-section-title">Five Job Fiesta Pool</div>`;
@@ -1037,15 +1090,46 @@ function renderResults(data) {
   resultsEl.innerHTML = html;
 }
 
+// ====== Randomize Settings ======
+function randomizeSettings() {
+  const partySizeSelect = document.getElementById("partySize");
+  
+  // Randomize party size (1-5, where 5 is full party)
+  const partySizeOptions = ["1", "2", "3", "4", "5"];
+  const randomPartySize = randomChoice(partySizeOptions);
+  const oldValue = partySizeSelect.value;
+  partySizeSelect.value = randomPartySize;
+  
+  // Trigger change event if value actually changed (or always trigger to ensure updates)
+  if (oldValue !== randomPartySize || true) {
+    partySizeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  
+  // Randomize shops
+  const shopsOptions = ["Normal", "Items Only", "Strict"];
+  const randomShops = randomChoice(shopsOptions);
+  document.querySelector(`input[name="shops"][value="${randomShops}"]`).checked = true;
+  
+  // Randomize random battles
+  const randomBattlesOptions = ["Normal", "Forbidden", "Required"];
+  const randomRandomBattles = randomChoice(randomBattlesOptions);
+  document.querySelector(`input[name="randomBattles"][value="${randomRandomBattles}"]`).checked = true;
+  
+  // Randomize allow secondary jobs
+  const allowSecondaryOptions = ["allowed", "disallowed"];
+  const randomAllowSecondary = randomChoice(allowSecondaryOptions);
+  document.querySelector(`input[name="allowSecondary"][value="${randomAllowSecondary}"]`).checked = true;
+}
+
 // ====== Reset ======
 function resetForm() {
   document.getElementById("partySize").value = "5";
 
   document.querySelector('input[name="specialMode"][value="normal"]').checked = true;
 
-  document.querySelector('input[name="crystals"][value="Normal"]').checked = true;
   document.querySelector('input[name="shops"][value="Normal"]').checked = true;
   document.querySelector('input[name="randomBattles"][value="Normal"]').checked = true;
+  document.querySelector('input[name="allowSecondary"][value="allowed"]').checked = true;
 
   populatePartyMemberSettings();
 
@@ -1133,7 +1217,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Add event listeners to all radio buttons and dropdowns to update run summary
   document.querySelectorAll('input[type="radio"]').forEach(radio => {
-    radio.addEventListener("change", updateRunSummary);
+    radio.addEventListener("change", () => {
+      updateRunSummary();
+      // If allowSecondary changed, update all secondary enabled states
+      if (radio.name === "allowSecondary") {
+        const currentPartySize = partySizeSelect.value === "5" ? 5 : parseInt(partySizeSelect.value, 10);
+        for (let i = 0; i < currentPartySize; i++) {
+          updateSecondaryEnabledState(i);
+        }
+      }
+    });
   });
 
   // Add event listeners to party member dropdowns to update run summary
@@ -1165,11 +1258,17 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initial setup of listeners
   addPartyMemberChangeListeners();
 
+  // Randomize all settings on initial page load
+  randomizeSettings();
+  
   // Generate initial run summary
   updateRunSummary();
 
   document.getElementById("btnRandomize").addEventListener("click", () => {
-    generateRun(true); // Force randomization of everything
+    // Randomize all settings first
+    randomizeSettings();
+    // Then force randomization of everything including party members
+    generateRun(true);
   });
   document.getElementById("btnReset").addEventListener("click", resetForm);
 });
