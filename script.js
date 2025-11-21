@@ -106,6 +106,9 @@ function populatePartyMemberSettings() {
     typeSelect.addEventListener("change", () => {
       updateMemberDropdowns(i);
       updateSecondaryEnabledState(i);
+      if (updateRunSummary) {
+        updateRunSummary();
+      }
     });
     dropdownsContainer.appendChild(typeSelect);
     
@@ -121,6 +124,9 @@ function populatePartyMemberSettings() {
         updateMonsterTypeDropdown(memberIndex);
       }
       updateSecondaryEnabledState(memberIndex);
+      if (updateRunSummary) {
+        updateRunSummary();
+      }
     });
     dropdownsContainer.appendChild(jobSelect);
     
@@ -137,6 +143,11 @@ function populatePartyMemberSettings() {
     const secondarySelect = document.createElement("select");
     secondarySelect.id = `member${i}_secondary`;
     secondarySelect.className = "member-secondary-select";
+    secondarySelect.addEventListener("change", () => {
+      if (updateRunSummary) {
+        updateRunSummary();
+      }
+    });
     
     secondaryContainer.appendChild(secondaryLabel);
     secondaryContainer.appendChild(secondarySelect);
@@ -335,6 +346,9 @@ function updateMonsterTypeDropdown(memberIndex) {
   
   if (!jobSelect || !secondarySelect) return;
   
+  // Preserve current value if it's a valid option
+  const currentValue = secondarySelect.value;
+  
   secondarySelect.innerHTML = "";
   
   // Add blank option at the top
@@ -347,24 +361,30 @@ function updateMonsterTypeDropdown(memberIndex) {
   if (!isNaN(familyIndex) && familyIndex >= 0 && familyIndex < monsterFamilies.length) {
     const family = monsterFamilies[familyIndex];
     
-    // Add "*" option
-    const starOpt = document.createElement("option");
-    starOpt.value = "*";
-    starOpt.textContent = "*";
-    secondarySelect.appendChild(starOpt);
-    
-    // Add family members
+    // Add family members (no "*" option - blank means use family)
     family.members.forEach(member => {
       const opt = document.createElement("option");
       opt.value = member;
       opt.textContent = member;
       secondarySelect.appendChild(opt);
     });
+    
+    // Restore previous value if it's still valid (blank or a family member)
+    if (currentValue === "" || family.members.includes(currentValue)) {
+      secondarySelect.value = currentValue;
+    } else {
+      // If previous value is not valid, default to blank
+      secondarySelect.value = "";
+    }
+  } else {
+    // No family selected, set to blank
+    secondarySelect.value = "";
   }
 }
 
 // ====== Generation logic ======
 let resultsEl;
+let updateRunSummary = null; // Will be set in DOMContentLoaded
 
 // Helper function to get character data from dropdowns, randomizing only blank fields
 function getCharacterFromDropdowns(i, specialMode = null) {
@@ -415,9 +435,10 @@ function getCharacterFromDropdowns(i, specialMode = null) {
         const family = monsterFamilies[familyIndex];
         // Check secondary for specific monster type
         const secondaryValue = secondarySelect ? secondarySelect.value : "";
-        if (secondaryValue && secondaryValue !== "" && secondaryValue !== "*") {
+        if (secondaryValue && secondaryValue !== "") {
           baseJob = secondaryValue;
         } else {
+          // Blank means use family - will be displayed as family name in summary
           baseJob = randomChoice(family.members);
         }
       }
@@ -436,7 +457,21 @@ function getCharacterFromDropdowns(i, specialMode = null) {
         }
       }
     } else if (secondaryValue !== "") {
-      secondary = secondaryValue;
+      secondary = secondaryValue === "none" ? null : secondaryValue;
+    }
+  }
+  
+  // For monsters, check if secondary is blank and store family info
+  let familyName = null;
+  if (characterType === "Monster" && jobSelect && secondarySelect) {
+    const jobValue = jobSelect.value;
+    const secondaryValue = secondarySelect.value;
+    // If secondary is blank, use the family name in summary
+    if (jobValue !== "" && secondaryValue === "") {
+      const familyIndex = parseInt(jobValue, 10);
+      if (!isNaN(familyIndex) && familyIndex >= 0 && familyIndex < monsterFamilies.length) {
+        familyName = monsterFamilies[familyIndex].name;
+      }
     }
   }
   
@@ -445,15 +480,49 @@ function getCharacterFromDropdowns(i, specialMode = null) {
     baseJob,
     secondary: secondary || null,
     characterType,
-    note: null
+    note: null,
+    familyName: familyName || null
   };
 }
 
-function generateRun() {
+function generateRun(forceRandomize = false) {
   // Party size
   const sizeValue = document.getElementById("partySize").value;
   const partySize = sizeValue === "5" ? 5 : parseInt(sizeValue, 10);
-  const unanimous = document.getElementById("unanimous").checked;
+  
+  // If forceRandomize is true, clear all party member dropdowns first
+  if (forceRandomize) {
+    for (let i = 0; i < partySize; i++) {
+      const typeSelect = document.getElementById(`member${i}_type`);
+      const jobSelect = document.getElementById(`member${i}_job`);
+      const secondarySelect = document.getElementById(`member${i}_secondary`);
+      
+      // Don't clear Ramza's type (it's always Ramza), but clear his job and secondary
+      if (i === 0) {
+        if (jobSelect) {
+          jobSelect.value = "";
+        }
+        if (secondarySelect) {
+          secondarySelect.value = "";
+        }
+        // Update Ramza's dropdowns
+        updateMemberDropdowns(i);
+      } else {
+        // For other members, clear everything
+        if (typeSelect) {
+          typeSelect.value = "";
+        }
+        if (jobSelect) {
+          jobSelect.value = "";
+        }
+        if (secondarySelect) {
+          secondarySelect.value = "";
+        }
+        // Update dropdowns after clearing
+        updateMemberDropdowns(i);
+      }
+    }
+  }
 
   // Special / scope
   const specialMode = getSelectedRadio("specialMode");
@@ -483,12 +552,8 @@ function generateRun() {
       if (jobSelect && jobSelect.value !== "" && fiestaJobs.includes(jobSelect.value)) {
         baseJob = jobSelect.value;
       } else {
-        // Randomize from fiesta jobs
-        if (unanimous) {
-          baseJob = randomChoice(fiestaJobs);
-        } else {
-          baseJob = fiestaJobs[i % fiestaJobs.length];
-        }
+        // Randomize from fiesta jobs - cycle through the 5 jobs
+        baseJob = fiestaJobs[i % fiestaJobs.length];
       }
       
       // Check if secondary is already set
@@ -516,7 +581,6 @@ function generateRun() {
 
     renderResults({
       partySize,
-      unanimous,
       specialMode,
       scope: "human",
       limitation: null,
@@ -551,6 +615,7 @@ function generateRun() {
       if (secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "none") {
         secondary = secondarySelect.value;
       } else if (secondarySelect && (secondarySelect.value === "" || secondarySelect.value === "none")) {
+        // Randomize secondary if blank
         const availableJobs = humanJobs.filter(j => j !== baseJob);
         if (availableJobs.length > 0) {
           secondary = randomChoice(availableJobs);
@@ -573,27 +638,27 @@ function generateRun() {
       
       let baseJob = null;
       
-      if (secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "*" && chocoboFamily.members.includes(secondarySelect.value)) {
-        baseJob = secondarySelect.value;
-      } else if (jobSelect && jobSelect.value !== "") {
-        const familyIndex = parseInt(jobSelect.value, 10);
-        if (!isNaN(familyIndex) && familyIndex >= 0 && familyIndex < monsterFamilies.length) {
-          const family = monsterFamilies[familyIndex];
-          if (family.name === "Chocobo Family") {
-            if (secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "*") {
-              baseJob = secondarySelect.value;
+          if (secondarySelect && secondarySelect.value !== "" && chocoboFamily.members.includes(secondarySelect.value)) {
+            baseJob = secondarySelect.value;
+          } else if (jobSelect && jobSelect.value !== "") {
+            const familyIndex = parseInt(jobSelect.value, 10);
+            if (!isNaN(familyIndex) && familyIndex >= 0 && familyIndex < monsterFamilies.length) {
+              const family = monsterFamilies[familyIndex];
+              if (family.name === "Chocobo Family") {
+                if (secondarySelect && secondarySelect.value !== "") {
+                  baseJob = secondarySelect.value;
+                } else {
+                  baseJob = randomChoice(family.members);
+                }
+              } else {
+                baseJob = randomChoice(chocoboFamily.members);
+              }
             } else {
-              baseJob = randomChoice(family.members);
+              baseJob = randomChoice(chocoboFamily.members);
             }
           } else {
             baseJob = randomChoice(chocoboFamily.members);
           }
-        } else {
-          baseJob = randomChoice(chocoboFamily.members);
-        }
-      } else {
-        baseJob = randomChoice(chocoboFamily.members);
-      }
       
       characters.push({
         name,
@@ -607,7 +672,6 @@ function generateRun() {
 
     renderResults({
       partySize: 4,
-      unanimous: false,
       specialMode,
       scope: "human",
       limitation: null,
@@ -638,6 +702,7 @@ function generateRun() {
       if (secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "none") {
         secondary = secondarySelect.value;
       } else if (secondarySelect && (secondarySelect.value === "" || secondarySelect.value === "none")) {
+        // Randomize secondary if blank
         const availableJobs = humanJobs.filter(j => j !== baseJob);
         if (availableJobs.length > 0) {
           secondary = randomChoice(availableJobs);
@@ -658,7 +723,6 @@ function generateRun() {
 
     renderResults({
       partySize,
-      unanimous,
       specialMode,
       scope: "human",
       limitation: null,
@@ -700,120 +764,62 @@ function generateRun() {
       note: ""
     });
 
-    if (unanimous) {
-      // One roll for the monster party as a whole
+    // Each monster gets its own family roll (or use existing selections)
+    const families = [];
+    for (let i = 1; i < maxSlots; i++) {
+      const jobSelect = document.getElementById(`member${i}_job`);
+      const secondarySelect = document.getElementById(`member${i}_secondary`);
       let family = null;
-      let familyIndex = -1;
+      let member = null;
       
-      // Check if all monsters have the same family selected
-      const firstJobSelect = document.getElementById(`member1_job`);
-      if (firstJobSelect && firstJobSelect.value !== "") {
-        familyIndex = parseInt(firstJobSelect.value, 10);
-        if (!isNaN(familyIndex) && familyIndex >= 0 && familyIndex < monsterFamilies.length) {
-          family = monsterFamilies[familyIndex];
+      let familyName = null;
+      if (jobSelect && jobSelect.value !== "") {
+        const selectedFamilyIndex = parseInt(jobSelect.value, 10);
+        if (!isNaN(selectedFamilyIndex) && selectedFamilyIndex >= 0 && selectedFamilyIndex < monsterFamilies.length) {
+          family = monsterFamilies[selectedFamilyIndex];
+          if (secondarySelect && secondarySelect.value !== "" && family.members.includes(secondarySelect.value)) {
+            member = secondarySelect.value;
+          } else {
+            member = randomChoice(family.members);
+            // If secondary is blank, store family name to display in summary
+            if (secondarySelect && secondarySelect.value === "") {
+              familyName = family.name;
+            }
+          }
         }
       }
       
       if (!family) {
-        familyIndex = Math.floor(Math.random() * monsterFamilies.length);
+        const familyIndex = Math.floor(Math.random() * monsterFamilies.length);
         family = monsterFamilies[familyIndex];
+        member = randomChoice(family.members);
       }
       
-      for (let i = 1; i < maxSlots; i++) {
-        const jobSelect = document.getElementById(`member${i}_job`);
-        const secondarySelect = document.getElementById(`member${i}_secondary`);
-        let member = null;
-        
-        if (secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "*" && family.members.includes(secondarySelect.value)) {
-          member = secondarySelect.value;
-        } else if (jobSelect && jobSelect.value !== "" && parseInt(jobSelect.value, 10) === familyIndex) {
-          // Same family selected, randomize member
-          member = randomChoice(family.members);
-        } else if (jobSelect && jobSelect.value === "") {
-          // Blank, randomize
-          member = randomChoice(family.members);
-        } else {
-          // Different family or invalid, use random from selected family
-          member = randomChoice(family.members);
-        }
-        
-        characters.push({
-          name: "Monster " + (i + 1),
-          baseJob: member,
-          members: family.members.slice(),
-          family: family.name,
-          note: ""
-        });
-      }
-
-      // Populate dropdowns with generated values
-      populateDropdownsFromCharacters(characters, partySize);
-
-      renderResults({
-        partySize,
-        unanimous,
-        specialMode,
-        scope: "monster",
-        limitation: null,
-        crystals,
-        shops,
-        randomBattles,
-        family,
-        characters
-      });
-    } else {
-      // Each monster gets its own family roll (or use existing selections)
-      const families = [];
-      for (let i = 1; i < maxSlots; i++) {
-        const jobSelect = document.getElementById(`member${i}_job`);
-        const secondarySelect = document.getElementById(`member${i}_secondary`);
-        let family = null;
-        let member = null;
-        
-        if (jobSelect && jobSelect.value !== "") {
-          const selectedFamilyIndex = parseInt(jobSelect.value, 10);
-          if (!isNaN(selectedFamilyIndex) && selectedFamilyIndex >= 0 && selectedFamilyIndex < monsterFamilies.length) {
-            family = monsterFamilies[selectedFamilyIndex];
-            if (secondarySelect && secondarySelect.value !== "" && secondarySelect.value !== "*" && family.members.includes(secondarySelect.value)) {
-              member = secondarySelect.value;
-            } else {
-              member = randomChoice(family.members);
-            }
-          }
-        }
-        
-        if (!family) {
-          const familyIndex = Math.floor(Math.random() * monsterFamilies.length);
-          family = monsterFamilies[familyIndex];
-          member = randomChoice(family.members);
-        }
-        
-        families.push(family);
-        characters.push({
-          name: "Monster " + (i + 1),
-          baseJob: member,
-          members: family.members.slice(),
-          family: family.name,
-          note: ""
-        });
-      }
-
-      // Populate dropdowns with generated values
-      populateDropdownsFromCharacters(characters, partySize);
-
-      renderResults({
-        partySize,
-        unanimous,
-        specialMode,
-        scope: "monster",
-        limitation: null,
-        crystals,
-        shops,
-        randomBattles,
-        families,
-        characters
+      families.push(family);
+      characters.push({
+        name: "Monster " + (i + 1),
+        baseJob: member,
+        members: family.members.slice(),
+        family: family.name,
+        familyName: familyName || null,
+        note: ""
       });
     }
+
+    // Populate dropdowns with generated values
+    populateDropdownsFromCharacters(characters, partySize);
+
+    renderResults({
+      partySize,
+      specialMode,
+      scope: "monster",
+      limitation: null,
+      crystals,
+      shops,
+      randomBattles,
+      families,
+      characters
+    });
     return;
   }
 
@@ -830,7 +836,6 @@ function generateRun() {
 
   renderResults({
     partySize,
-    unanimous,
     specialMode,
     scope: "mixed",
     limitation: null,
@@ -882,7 +887,13 @@ function populateDropdownsFromCharacters(characters, partySize) {
         jobSelect.value = String(familyIndex);
         updateMonsterTypeDropdown(i);
         
-        secondarySelect.value = char.baseJob;
+        // If familyName is set, it means blank was selected, so set to blank
+        // Otherwise, set to the specific monster type
+        if (char.familyName) {
+          secondarySelect.value = "";
+        } else {
+          secondarySelect.value = char.baseJob;
+        }
       }
     } else {
       // Human character
@@ -942,7 +953,6 @@ function buildHumanNote(limitation) {
 function renderResults(data) {
   const {
     partySize,
-    unanimous,
     specialMode,
     scope,
     limitation,
@@ -981,7 +991,6 @@ function renderResults(data) {
 
   html += `<div class="results-section-title">General</div>`;
   html += `<div class="row"><span class="label">Party Size</span><span class="value">${sizeLabel}</span></div>`;
-  html += `<div class="row"><span class="label">Unanimous</span><span class="value">${unanimous ? "Yes" : "No"}</span></div>`;
   html += `<div class="row"><span class="label">Challenge Mode</span><span class="value">${specialLabel}</span></div>`;
   if (limitation) {
     html += `<div class="row"><span class="label">Job Scope</span><span class="value">${scopeLabel}</span></div>`;
@@ -1006,7 +1015,12 @@ function renderResults(data) {
     html += `<div class="results-section-title">Party</div>`;
     html += `<ul class="job-list">`;
     characters.forEach(ch => {
-      let line = `<strong>${ch.name}</strong>: ${ch.baseJob}`;
+      let displayJob = ch.baseJob;
+      // If familyName is set, it means secondary was blank, so display the family name
+      if (ch.familyName) {
+        displayJob = ch.familyName;
+      }
+      let line = `<strong>${ch.name}</strong>: ${displayJob}`;
       if (ch.secondary) {
         line += ` / ${ch.secondary}`;
       }
@@ -1018,7 +1032,7 @@ function renderResults(data) {
     html += `</ul>`;
   }
 
-  html += `<div class="hint" style="margin-top:6px;">Play normally until you reach <strong>Mandalia Plains</strong>, unlock the required jobs, then switch into your assigned configuration for the remainder of the run.</div>`;
+  html += `<div class="hint" style="margin-top:6px;"></div>`;
 
   resultsEl.innerHTML = html;
 }
@@ -1026,7 +1040,6 @@ function renderResults(data) {
 // ====== Reset ======
 function resetForm() {
   document.getElementById("partySize").value = "5";
-  document.getElementById("unanimous").checked = false;
 
   document.querySelector('input[name="specialMode"][value="normal"]').checked = true;
 
@@ -1048,7 +1061,12 @@ document.addEventListener("DOMContentLoaded", () => {
   resultsEl = document.getElementById("results");
   partyMemberSettingsPanel = document.getElementById("partyMemberSettingsPanel");
 
-  // Initialize party member settings
+  // Function to update run summary when any setting changes
+  updateRunSummary = function() {
+    generateRun();
+  };
+
+  // Initialize party member settings (after updateRunSummary is set)
   populatePartyMemberSettings();
   
   // Check initial mode and set panel visibility
@@ -1059,10 +1077,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Function to add change listeners to party member dropdowns for run summary updates
+  function addPartyMemberChangeListeners() {
+    const partySize = partySizeSelect.value === "5" ? 5 : parseInt(partySizeSelect.value, 10);
+    for (let i = 0; i < partySize; i++) {
+      const secondarySelect = document.getElementById(`member${i}_secondary`);
+      if (secondarySelect) {
+        // Add listener for secondary dropdown changes
+        secondarySelect.addEventListener("change", updateRunSummary);
+      }
+    }
+  }
+
   // Update party member settings when party size changes
   const partySizeSelect = document.getElementById("partySize");
   partySizeSelect.addEventListener("change", () => {
     populatePartyMemberSettings();
+    addPartyMemberChangeListeners();
+    updateRunSummary();
   });
 
   // Handle special mode changes
@@ -1095,10 +1127,50 @@ document.addEventListener("DOMContentLoaded", () => {
           updateSecondaryEnabledState(i);
         }
       }
+      updateRunSummary();
     });
   });
 
-  document.getElementById("btnRandomize").addEventListener("click", generateRun);
+  // Add event listeners to all radio buttons and dropdowns to update run summary
+  document.querySelectorAll('input[type="radio"]').forEach(radio => {
+    radio.addEventListener("change", updateRunSummary);
+  });
+
+  // Add event listeners to party member dropdowns to update run summary
+  function addPartyMemberChangeListeners() {
+    const partySize = partySizeSelect.value === "5" ? 5 : parseInt(partySizeSelect.value, 10);
+    for (let i = 0; i < partySize; i++) {
+      const typeSelect = document.getElementById(`member${i}_type`);
+      const jobSelect = document.getElementById(`member${i}_job`);
+      const secondarySelect = document.getElementById(`member${i}_secondary`);
+      
+      if (typeSelect) {
+        typeSelect.removeEventListener("change", updateRunSummary);
+        typeSelect.addEventListener("change", updateRunSummary);
+      }
+      if (jobSelect) {
+        jobSelect.removeEventListener("change", updateRunSummary);
+        jobSelect.addEventListener("change", updateRunSummary);
+      }
+      if (secondarySelect) {
+        secondarySelect.removeEventListener("change", updateRunSummary);
+        secondarySelect.addEventListener("change", updateRunSummary);
+      }
+    }
+  }
+
+  // Update listeners when party size changes
+  partySizeSelect.addEventListener("change", addPartyMemberChangeListeners);
+  
+  // Initial setup of listeners
+  addPartyMemberChangeListeners();
+
+  // Generate initial run summary
+  updateRunSummary();
+
+  document.getElementById("btnRandomize").addEventListener("click", () => {
+    generateRun(true); // Force randomization of everything
+  });
   document.getElementById("btnReset").addEventListener("click", resetForm);
 });
 

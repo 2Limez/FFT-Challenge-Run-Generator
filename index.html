@@ -14,33 +14,6 @@
   <div class="main-panel">
     <!-- LEFT: Controls -->
     <div class="left-column">
-      <!-- Required Settings -->
-      <div class="panel">
-        <div class="panel-title">Required Settings</div>
-        <div class="panel-content">
-          <label>
-            Party Size:
-            <select id="partySize">
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5" selected>*</option>
-            </select>
-            <span class="small">(* = full party)</span>
-          </label>
-
-          <label>
-            <input type="checkbox" id="unanimous">
-            Unanimous (one roll for all characters)
-          </label>
-
-          <div class="hint">
-            If <strong>Monstrous</strong> is active and Unanimous is checked, Ramza is rolled separately from the rest of the party.
-          </div>
-        </div>
-      </div>
-
       <!-- Challenge Mode -->
       <div class="panel">
         <div class="panel-title">Challenge Mode</div>
@@ -69,11 +42,23 @@
         </div>
       </div>
 
-      <!-- Other Settings -->
+      <!-- Settings -->
       <div class="panel">
-        <div class="panel-title">Other Settings</div>
+        <div class="panel-title">Settings</div>
         <div class="panel-content">
-          <div>
+          <label>
+            Party Size:
+            <select id="partySize">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5" selected>*</option>
+            </select>
+            <span class="small">(* = full party)</span>
+          </label>
+
+          <div style="margin-top:6px;">
             <strong>Crystals:</strong>
           </div>
           <label class="inline">
@@ -123,7 +108,7 @@
     <!-- RIGHT: Output -->
     <div class="right-column">
       <div class="panel" id="partyMemberSettingsPanel">
-        <div class="panel-title">Party Member Settings</div>
+        <div class="panel-title">Party Members</div>
         <div class="panel-content" id="partyMemberSettings">
           <!-- Will be populated by JavaScript based on party size -->
         </div>
