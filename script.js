@@ -399,36 +399,73 @@ const PartyMemberUI = {
       
       if (i > 0) typeSelect.removeAttribute('disabled');
       
-      const isMonster = Data.monsterFamilies.some(family => 
-        family.members.includes(char.baseJob)
-      );
+      // Check if character is a monster - first check characterType property
+      let isMonster = char.characterType === "Monster";
+      let family = null;
+      let isUniqueFamily = false;
       
       if (isMonster) {
-        const family = Data.monsterFamilies.find(f => f.members.includes(char.baseJob));
-        if (family) {
-          if (i > 0) typeSelect.removeAttribute('disabled');
-          typeSelect.value = "Monster";
-          this.updateMemberDropdowns(i);
-          if (i > 0) typeSelect.removeAttribute('disabled');
-          
-          const familyIndex = Data.monsterFamilies.indexOf(family);
-          jobSelect.value = String(familyIndex);
-          this.updateMonsterTypeDropdown(i);
-          
-          if (char.familyName) {
-            secondarySelect.value = "";
-          } else {
-            secondarySelect.value = char.baseJob;
+        // Check regular monster families
+        family = Data.monsterFamilies.find(f => f.members.includes(char.baseJob));
+        if (!family) {
+          // Check unique monster families (baseJob is the family name)
+          const uniqueFamily = Data.uniqueMonsterFamilies.find(f => f.name === char.baseJob);
+          if (uniqueFamily) {
+            family = uniqueFamily;
+            isUniqueFamily = true;
           }
         }
       } else {
+        // Also check by baseJob if characterType wasn't set
+        family = Data.monsterFamilies.find(f => f.members.includes(char.baseJob));
+        if (family) {
+          isMonster = true;
+        } else {
+          // Check unique monster families (baseJob is the family name)
+          const uniqueFamily = Data.uniqueMonsterFamilies.find(f => f.name === char.baseJob);
+          if (uniqueFamily) {
+            isMonster = true;
+            family = uniqueFamily;
+            isUniqueFamily = true;
+          }
+        }
+      }
+      
+      if (isMonster && family) {
+        if (i > 0) typeSelect.removeAttribute('disabled');
+        typeSelect.value = "Monster";
+        this.updateMemberDropdowns(i);
+        if (i > 0) typeSelect.removeAttribute('disabled');
+        
+        if (isUniqueFamily) {
+          // Unique families use negative indices
+          const uniqueIndex = Data.uniqueMonsterFamilies.indexOf(family);
+          jobSelect.value = String(-(uniqueIndex + 1));
+        } else {
+          const familyIndex = Data.monsterFamilies.indexOf(family);
+          jobSelect.value = String(familyIndex);
+        }
+        this.updateMonsterTypeDropdown(i);
+        
+        if (char.familyName || isUniqueFamily) {
+          // Unique families have no types, so secondary should be blank
+          secondarySelect.value = "";
+        } else {
+          secondarySelect.value = char.baseJob;
+        }
+      } else {
+        // Not a monster, treat as human/Ramza
         if (i > 0) typeSelect.removeAttribute('disabled');
         const charType = char.characterType || (i === 0 ? "Ramza" : "Human");
         typeSelect.value = charType;
         this.updateMemberDropdowns(i);
         if (i > 0) typeSelect.removeAttribute('disabled');
         
-        if (jobSelect) jobSelect.value = char.baseJob;
+        // Only set job if it's a valid human job or unique character job
+        if (jobSelect && (Data.humanJobs.includes(char.baseJob) || 
+            (i > 0 && Data.uniqueCharacterJobs.includes(char.baseJob)))) {
+          jobSelect.value = char.baseJob;
+        }
         if (secondarySelect) {
           if (char.secondary && char.secondary !== char.baseJob && Data.humanJobs.includes(char.secondary)) {
             secondarySelect.value = char.secondary;
@@ -499,24 +536,45 @@ const CharacterGenerator = {
         const availableJobs = (uniqueAllowed && i > 0)
           ? [...Data.humanJobs, ...Data.uniqueCharacterJobs]
           : Data.humanJobs;
-        baseJob = Utils.randomChoice(availableJobs);
+        if (availableJobs.length > 0) {
+          baseJob = Utils.randomChoice(availableJobs);
+        } else {
+          // Fallback to first human job if somehow no jobs available
+          baseJob = Data.humanJobs[0] || "Squire";
+        }
       } else if (characterType === "Monster") {
         const uniqueAllowed = Utils.getSelectedRadio("uniqueCharacters") === "allowed";
         const allFamilies = uniqueAllowed
           ? [...Data.monsterFamilies, ...Data.uniqueMonsterFamilies]
           : Data.monsterFamilies;
-        const familyIndex = Math.floor(Math.random() * allFamilies.length);
-        const family = allFamilies[familyIndex];
-        if (family.members.length > 0) {
-          baseJob = Utils.randomChoice(family.members);
+        if (allFamilies.length > 0) {
+          const familyIndex = Math.floor(Math.random() * allFamilies.length);
+          const family = allFamilies[familyIndex];
+          if (family.members.length > 0) {
+            baseJob = Utils.randomChoice(family.members);
+          } else {
+            // Unique families have no members, use family name as job
+            baseJob = family.name;
+          }
         } else {
-          // Unique families have no members, use family name as job
-          baseJob = family.name;
+          // Fallback if somehow no families available
+          baseJob = Data.monsterFamilies[0]?.members[0] || "Chocobo";
         }
       }
     } else {
       if (characterType === "Ramza" || characterType === "Human") {
-        baseJob = jobValue;
+        // If jobValue is a valid human job or unique character job, use it
+        if (Data.humanJobs.includes(jobValue) || 
+            (i > 0 && Data.uniqueCharacterJobs.includes(jobValue))) {
+          baseJob = jobValue;
+        } else {
+          // Invalid job value, fallback to random assignment
+          const uniqueAllowed = Utils.getSelectedRadio("uniqueCharacters") === "allowed";
+          const availableJobs = (uniqueAllowed && i > 0)
+            ? [...Data.humanJobs, ...Data.uniqueCharacterJobs]
+            : Data.humanJobs;
+          baseJob = Utils.randomChoice(availableJobs);
+        }
       } else if (characterType === "Monster") {
         const familyIndex = parseInt(jobValue, 10);
         // Handle unique monster families (negative indices)
@@ -526,6 +584,9 @@ const CharacterGenerator = {
             const family = Data.uniqueMonsterFamilies[uniqueIndex];
             // Unique families have no types, so use family name as job
             baseJob = family.name;
+          } else {
+            // Invalid unique family index, fallback
+            baseJob = Data.uniqueMonsterFamilies[0]?.name || "Construct 8";
           }
         } else if (!isNaN(familyIndex) && familyIndex >= 0 && familyIndex < Data.monsterFamilies.length) {
           const family = Data.monsterFamilies[familyIndex];
@@ -535,7 +596,34 @@ const CharacterGenerator = {
           } else {
             baseJob = Utils.randomChoice(family.members);
           }
+        } else {
+          // Invalid family index, fallback to random monster
+          const uniqueAllowed = Utils.getSelectedRadio("uniqueCharacters") === "allowed";
+          const allFamilies = uniqueAllowed
+            ? [...Data.monsterFamilies, ...Data.uniqueMonsterFamilies]
+            : Data.monsterFamilies;
+          if (allFamilies.length > 0) {
+            const family = allFamilies[Math.floor(Math.random() * allFamilies.length)];
+            if (family.members.length > 0) {
+              baseJob = Utils.randomChoice(family.members);
+            } else {
+              baseJob = family.name;
+            }
+          } else {
+            baseJob = Data.monsterFamilies[0]?.members[0] || "Chocobo";
+          }
         }
+      }
+    }
+    
+    // Final safety check: ensure baseJob is never null
+    if (!baseJob) {
+      if (characterType === "Ramza" || characterType === "Human") {
+        baseJob = Data.humanJobs[0] || "Squire";
+      } else if (characterType === "Monster") {
+        baseJob = Data.monsterFamilies[0]?.members[0] || "Chocobo";
+      } else {
+        baseJob = "Squire"; // Ultimate fallback
       }
     }
     
@@ -1026,23 +1114,6 @@ const Renderer = {
       html += `<div class="row"><span class="label">Job Limitation</span><span class="value">${limitationLabel}</span></div>`;
     }
 
-    // Run Rules section
-    const hasShopsRule = shops === "Items Only" || shops === "Strict";
-    const hasRandomBattlesRule = randomBattles === "Forbidden";
-    
-    if (hasShopsRule || hasRandomBattlesRule) {
-      html += `<div class="results-section-title">Run Rules</div>`;
-      if (shops === "Items Only") {
-        html += `<div style="margin-bottom:8px;">You cannot buy equipment from shops (except for poaches).</div>`;
-      } else if (shops === "Strict") {
-        html += `<div style="margin-bottom:8px;">You cannot buy anything from shops (except for poaches).</div>`;
-      }
-      if (randomBattles === "Forbidden") {
-        html += `<div style="margin-bottom:8px;">You must skip all random battles.</div>`;
-      }
-      html += `</div>`;
-    }
-
     if (specialMode === "fjf" && fiestaJobs) {
       html += `<div class="results-section-title">Five Job Fiesta Pool</div>`;
       html += `<ul class="job-list">`;
@@ -1064,6 +1135,23 @@ const Renderer = {
         html += `<li>${line}</li>`;
       });
       html += `</ul>`;
+    }
+
+    // Run Rules section
+    const hasShopsRule = shops === "Items Only" || shops === "Strict";
+    const hasRandomBattlesRule = randomBattles === "Forbidden";
+    
+    if (hasShopsRule || hasRandomBattlesRule) {
+      html += `<div class="results-section-title">Run Rules</div>`;
+      if (shops === "Items Only") {
+        html += `<div style="margin-bottom:8px;">You cannot buy equipment from shops (except for poaches).</div>`;
+      } else if (shops === "Strict") {
+        html += `<div style="margin-bottom:8px;">You cannot buy anything from shops (except for poaches).</div>`;
+      }
+      if (randomBattles === "Forbidden") {
+        html += `<div style="margin-bottom:8px;">You must skip all random battles.</div>`;
+      }
+      html += `</div>`;
     }
 
     html += `<div class="hint" style="margin-top:6px;"></div>`;
@@ -1100,7 +1188,10 @@ const Settings = {
   randomize(skipPartySize = false) {
     const partySizeSelect = document.getElementById("partySize");
     
-    if (!skipPartySize) {
+    // Don't randomize party size if it's disabled (locked by Five Job Fiesta or Cavalry mode)
+    const isPartySizeLocked = partySizeSelect && partySizeSelect.disabled;
+    
+    if (!skipPartySize && !isPartySizeLocked) {
       const partySizeOptions = ["1", "2", "3", "4", "5"];
       const randomPartySize = Utils.randomChoice(partySizeOptions);
       const oldValue = partySizeSelect.value;

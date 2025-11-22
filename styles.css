@@ -247,6 +247,19 @@ body {
   margin-right: 16px;
 }
 
+/* Make radio button groups in settings display horizontally - only apply to Settings panel in left column */
+.left-column .panel-content > div:not(.buttons) {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.left-column .panel-content > div:not(.buttons) strong {
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
 .hint {
   font-size: 11px;
   opacity: 0.75;
