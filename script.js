@@ -13,6 +13,10 @@ const Data = {
     "Dancer", "Bard", "Mime"
   ],
 
+  uniqueCharacterJobs: [
+    "Mustadio", "Agrias", "Rapha", "Marach", "Cloud", "Beowulf", "Reis", "Orlandeau", "Meliadoul"
+  ],
+
   monsterFamilies: [
     { name: "Chocobo Family", members: ["Chocobo", "Black Chocobo", "Red Chocobo"] },
     { name: "Goblin Family", members: ["Goblin", "Black Goblin", "Gobbledygook"] },
@@ -30,6 +34,11 @@ const Data = {
     { name: "Behemoth Family", members: ["Behemoth", "Behemoth King", "Dark Behemoth"] },
     { name: "Dragon Family", members: ["Dragon", "Blue Dragon", "Red Dragon"] },
     { name: "Hydra Family", members: ["Hydra", "Greater Hydra", "Tiamat"] }
+  ],
+
+  uniqueMonsterFamilies: [
+    { name: "Construct 8", members: [] },
+    { name: "Byblos", members: [] }
   ],
 
   getAllMonsterTypes() {
@@ -240,23 +249,34 @@ const PartyMemberUI = {
     jobSelect.style.display = "none";
     if (secondaryContainer) secondaryContainer.style.display = "none";
     
-    if (type === "Ramza" || type === "Human") {
-      this._populateHumanJobDropdown(jobSelect, secondarySelect, secondaryContainer, secondaryLabel);
-    } else if (type === "Monster") {
+    // Handle blank type by defaulting to Human for non-Ramza members
+    const effectiveType = (type === "" && memberIndex > 0) ? "Human" : type;
+    
+    if (effectiveType === "Ramza" || effectiveType === "Human") {
+      this._populateHumanJobDropdown(jobSelect, secondarySelect, secondaryContainer, secondaryLabel, memberIndex);
+    } else if (effectiveType === "Monster") {
       this._populateMonsterJobDropdown(jobSelect, secondarySelect, secondaryContainer, secondaryLabel, memberIndex);
     }
     
     this.updateSecondaryEnabledState(memberIndex);
   },
 
-  _populateHumanJobDropdown(jobSelect, secondarySelect, secondaryContainer, secondaryLabel) {
+  _populateHumanJobDropdown(jobSelect, secondarySelect, secondaryContainer, secondaryLabel, memberIndex) {
     jobSelect.style.display = "flex";
     jobSelect.appendChild(this._createOption("", ""));
     Data.humanJobs.forEach(job => {
       jobSelect.appendChild(this._createOption(job, job));
     });
     
+    // Add unique character jobs if allowed, but never for Five Job Fiesta or Ramza (memberIndex 0)
     const isFJF = Utils.getSelectedRadio("specialMode") === "fjf";
+    const uniqueAllowed = Utils.getSelectedRadio("uniqueCharacters") === "allowed";
+    const isRamza = memberIndex === 0;
+    if (uniqueAllowed && !isFJF && !isRamza) {
+      Data.uniqueCharacterJobs.forEach(job => {
+        jobSelect.appendChild(this._createOption(job, job));
+      });
+    }
     
     if (!isFJF && secondaryContainer) {
       secondaryContainer.style.display = "inline-flex";
@@ -267,6 +287,7 @@ const PartyMemberUI = {
       Data.humanJobs.forEach(job => {
         secondarySelect.appendChild(this._createOption(job, job));
       });
+      // Note: Unique character jobs are NOT added to secondary dropdown
     } else if (isFJF && secondaryContainer) {
       secondaryContainer.style.display = "none";
     }
@@ -278,6 +299,15 @@ const PartyMemberUI = {
     Data.monsterFamilies.forEach((family, index) => {
       jobSelect.appendChild(this._createOption(String(index), family.name));
     });
+    
+    // Add unique monster families if allowed
+    const uniqueAllowed = Utils.getSelectedRadio("uniqueCharacters") === "allowed";
+    if (uniqueAllowed) {
+      // Use negative indices to distinguish unique families from regular ones
+      Data.uniqueMonsterFamilies.forEach((family, index) => {
+        jobSelect.appendChild(this._createOption(String(-(index + 1)), family.name));
+      });
+    }
     
     if (secondaryContainer) secondaryContainer.style.display = "inline-flex";
     if (secondaryLabel) secondaryLabel.textContent = "Type: ";
@@ -296,7 +326,17 @@ const PartyMemberUI = {
     secondarySelect.appendChild(this._createOption("", ""));
     
     const familyIndex = parseInt(jobSelect.value, 10);
-    if (!isNaN(familyIndex) && familyIndex >= 0 && familyIndex < Data.monsterFamilies.length) {
+    
+    // Handle unique monster families (negative indices) - they have no types
+    if (!isNaN(familyIndex) && familyIndex < 0) {
+      const uniqueIndex = Math.abs(familyIndex) - 1;
+      if (uniqueIndex >= 0 && uniqueIndex < Data.uniqueMonsterFamilies.length) {
+        // Unique families have no types, so dropdown stays blank
+        secondarySelect.value = "";
+      } else {
+        secondarySelect.value = "";
+      }
+    } else if (!isNaN(familyIndex) && familyIndex >= 0 && familyIndex < Data.monsterFamilies.length) {
       const family = Data.monsterFamilies[familyIndex];
       family.members.forEach(member => {
         secondarySelect.appendChild(this._createOption(member, member));
@@ -454,18 +494,40 @@ const CharacterGenerator = {
     const jobValue = jobSelect ? jobSelect.value : "";
     if (jobValue === "") {
       if (characterType === "Ramza" || characterType === "Human") {
-        baseJob = Utils.randomChoice(Data.humanJobs);
+        const uniqueAllowed = Utils.getSelectedRadio("uniqueCharacters") === "allowed";
+        // Ramza (i === 0) cannot have unique character jobs
+        const availableJobs = (uniqueAllowed && i > 0)
+          ? [...Data.humanJobs, ...Data.uniqueCharacterJobs]
+          : Data.humanJobs;
+        baseJob = Utils.randomChoice(availableJobs);
       } else if (characterType === "Monster") {
-        const familyIndex = Math.floor(Math.random() * Data.monsterFamilies.length);
-        const family = Data.monsterFamilies[familyIndex];
-        baseJob = Utils.randomChoice(family.members);
+        const uniqueAllowed = Utils.getSelectedRadio("uniqueCharacters") === "allowed";
+        const allFamilies = uniqueAllowed
+          ? [...Data.monsterFamilies, ...Data.uniqueMonsterFamilies]
+          : Data.monsterFamilies;
+        const familyIndex = Math.floor(Math.random() * allFamilies.length);
+        const family = allFamilies[familyIndex];
+        if (family.members.length > 0) {
+          baseJob = Utils.randomChoice(family.members);
+        } else {
+          // Unique families have no members, use family name as job
+          baseJob = family.name;
+        }
       }
     } else {
       if (characterType === "Ramza" || characterType === "Human") {
         baseJob = jobValue;
       } else if (characterType === "Monster") {
         const familyIndex = parseInt(jobValue, 10);
-        if (!isNaN(familyIndex) && familyIndex >= 0 && familyIndex < Data.monsterFamilies.length) {
+        // Handle unique monster families (negative indices)
+        if (!isNaN(familyIndex) && familyIndex < 0) {
+          const uniqueIndex = Math.abs(familyIndex) - 1;
+          if (uniqueIndex >= 0 && uniqueIndex < Data.uniqueMonsterFamilies.length) {
+            const family = Data.uniqueMonsterFamilies[uniqueIndex];
+            // Unique families have no types, so use family name as job
+            baseJob = family.name;
+          }
+        } else if (!isNaN(familyIndex) && familyIndex >= 0 && familyIndex < Data.monsterFamilies.length) {
           const family = Data.monsterFamilies[familyIndex];
           const secondaryValue = secondarySelect ? secondarySelect.value : "";
           if (secondaryValue && secondaryValue !== "") {
@@ -504,7 +566,13 @@ const CharacterGenerator = {
       const secondaryValue = secondarySelect.value;
       if (jobValue !== "" && secondaryValue === "") {
         const familyIndex = parseInt(jobValue, 10);
-        if (!isNaN(familyIndex) && familyIndex >= 0 && familyIndex < Data.monsterFamilies.length) {
+        // Handle unique monster families (negative indices)
+        if (!isNaN(familyIndex) && familyIndex < 0) {
+          const uniqueIndex = Math.abs(familyIndex) - 1;
+          if (uniqueIndex >= 0 && uniqueIndex < Data.uniqueMonsterFamilies.length) {
+            familyName = Data.uniqueMonsterFamilies[uniqueIndex].name;
+          }
+        } else if (!isNaN(familyIndex) && familyIndex >= 0 && familyIndex < Data.monsterFamilies.length) {
           familyName = Data.monsterFamilies[familyIndex].name;
         }
       }
@@ -526,7 +594,9 @@ const CharacterGenerator = {
 // ============================================================================
 const SpecialModes = {
   generateFiveJobFiesta(partySize) {
-    const shuffledJobs = Utils.shuffle(Data.humanJobs);
+    // Five Job Fiesta never allows unique characters
+    const availableJobs = Data.humanJobs;
+    const shuffledJobs = Utils.shuffle(availableJobs);
     const fiestaJobs = shuffledJobs.slice(0, 5);
     const characters = [];
     const allowSecondary = Utils.getSelectedRadio("allowSecondary");
@@ -546,13 +616,17 @@ const SpecialModes = {
       
       let secondary = null;
       if (secondaryAllowed && secondarySelect && secondarySelect.value !== "" && 
-          secondarySelect.value !== "none" && fiestaJobs.includes(secondarySelect.value)) {
-        secondary = secondarySelect.value;
+          secondarySelect.value !== "none") {
+        // Only allow regular human jobs as secondary, not unique characters
+        if (Data.humanJobs.includes(secondarySelect.value) && fiestaJobs.includes(secondarySelect.value)) {
+          secondary = secondarySelect.value;
+        }
       } else if (secondaryAllowed && secondarySelect && 
                  (secondarySelect.value === "" || secondarySelect.value === "none")) {
-        const availableJobs = fiestaJobs.filter(j => j !== baseJob);
-        if (availableJobs.length > 0) {
-          secondary = Utils.randomChoice(availableJobs);
+        // Only randomize from regular human jobs for secondary
+        const availableSecondaryJobs = fiestaJobs.filter(j => j !== baseJob && Data.humanJobs.includes(j));
+        if (availableSecondaryJobs.length > 0) {
+          secondary = Utils.randomChoice(availableSecondaryJobs);
         }
       }
       
@@ -580,19 +654,29 @@ const SpecialModes = {
       const secondarySelect = document.getElementById(`member${i}_secondary`);
       const name = i === 0 ? "Ramza" : "Ally " + i;
       
+      const uniqueAllowed = Utils.getSelectedRadio("uniqueCharacters") === "allowed";
+      // Ramza (i === 0) cannot have unique character jobs
+      const availableJobs = (uniqueAllowed && i > 0)
+        ? [...Data.humanJobs, ...Data.uniqueCharacterJobs]
+        : Data.humanJobs;
+      
       let baseJob = null;
-      if (jobSelect && jobSelect.value !== "" && Data.humanJobs.includes(jobSelect.value)) {
+      if (jobSelect && jobSelect.value !== "" && availableJobs.includes(jobSelect.value)) {
         baseJob = jobSelect.value;
       } else {
-        baseJob = Utils.randomChoice(Data.humanJobs);
+        baseJob = Utils.randomChoice(availableJobs);
       }
       
       let secondary = null;
       if (secondaryAllowed && secondarySelect && secondarySelect.value !== "" && 
           secondarySelect.value !== "none") {
-        secondary = secondarySelect.value;
+        // Only allow regular human jobs as secondary, not unique characters
+        if (Data.humanJobs.includes(secondarySelect.value)) {
+          secondary = secondarySelect.value;
+        }
       } else if (secondaryAllowed && secondarySelect && 
                  (secondarySelect.value === "" || secondarySelect.value === "none")) {
+        // Only randomize from regular human jobs for secondary
         const availableJobs = Data.humanJobs.filter(j => j !== baseJob);
         if (availableJobs.length > 0) {
           secondary = Utils.randomChoice(availableJobs);
@@ -649,28 +733,38 @@ const SpecialModes = {
     const characters = [];
     const allowSecondary = Utils.getSelectedRadio("allowSecondary");
     const secondaryAllowed = allowSecondary === "allowed";
+    const uniqueAllowed = Utils.getSelectedRadio("uniqueCharacters") === "allowed";
     
     for (let i = 0; i < partySize; i++) {
       const jobSelect = document.getElementById(`member${i}_job`);
       const secondarySelect = document.getElementById(`member${i}_secondary`);
       const name = i === 0 ? "Ramza" : `Party Member ${i + 1}`;
       
+      // Ramza (i === 0) cannot have unique character jobs
+      const availableJobs = (uniqueAllowed && i > 0)
+        ? [...Data.humanJobs, ...Data.uniqueCharacterJobs]
+        : Data.humanJobs;
+      
       let baseJob = null;
-      if (jobSelect && jobSelect.value !== "" && Data.humanJobs.includes(jobSelect.value)) {
+      if (jobSelect && jobSelect.value !== "" && availableJobs.includes(jobSelect.value)) {
         baseJob = jobSelect.value;
       } else {
-        baseJob = Utils.randomChoice(Data.humanJobs);
+        baseJob = Utils.randomChoice(availableJobs);
       }
       
       let secondary = null;
       if (secondaryAllowed && secondarySelect && secondarySelect.value !== "" && 
           secondarySelect.value !== "none") {
-        secondary = secondarySelect.value;
+        // Only allow regular human jobs as secondary, not unique characters
+        if (Data.humanJobs.includes(secondarySelect.value)) {
+          secondary = secondarySelect.value;
+        }
       } else if (secondaryAllowed && secondarySelect && 
                  (secondarySelect.value === "" || secondarySelect.value === "none")) {
-        const availableJobs = Data.humanJobs.filter(j => j !== baseJob);
-        if (availableJobs.length > 0) {
-          secondary = Utils.randomChoice(availableJobs);
+        // Only randomize from regular human jobs for secondary
+        const availableSecondaryJobs = Data.humanJobs.filter(j => j !== baseJob);
+        if (availableSecondaryJobs.length > 0) {
+          secondary = Utils.randomChoice(availableSecondaryJobs);
         }
       }
       
@@ -721,6 +815,11 @@ const SpecialModes = {
     });
     
     // Each monster gets its own family roll
+    const uniqueAllowed = Utils.getSelectedRadio("uniqueCharacters") === "allowed";
+    const allFamilies = uniqueAllowed
+      ? [...Data.monsterFamilies, ...Data.uniqueMonsterFamilies]
+      : Data.monsterFamilies;
+    
     for (let i = 1; i < partySize; i++) {
       const jobSelect = document.getElementById(`member${i}_job`);
       const secondarySelect = document.getElementById(`member${i}_secondary`);
@@ -730,7 +829,16 @@ const SpecialModes = {
       
       if (jobSelect && jobSelect.value !== "") {
         const selectedFamilyIndex = parseInt(jobSelect.value, 10);
-        if (!isNaN(selectedFamilyIndex) && selectedFamilyIndex >= 0 && 
+        // Handle unique monster families (negative indices)
+        if (!isNaN(selectedFamilyIndex) && selectedFamilyIndex < 0) {
+          const uniqueIndex = Math.abs(selectedFamilyIndex) - 1;
+          if (uniqueIndex >= 0 && uniqueIndex < Data.uniqueMonsterFamilies.length) {
+            family = Data.uniqueMonsterFamilies[uniqueIndex];
+            // Unique families have no members, use family name as job
+            member = family.name;
+            familyName = family.name;
+          }
+        } else if (!isNaN(selectedFamilyIndex) && selectedFamilyIndex >= 0 && 
             selectedFamilyIndex < Data.monsterFamilies.length) {
           family = Data.monsterFamilies[selectedFamilyIndex];
           if (secondarySelect && secondarySelect.value !== "" && 
@@ -746,16 +854,21 @@ const SpecialModes = {
       }
       
       if (!family) {
-        const familyIndex = Math.floor(Math.random() * Data.monsterFamilies.length);
-        family = Data.monsterFamilies[familyIndex];
-        member = Utils.randomChoice(family.members);
+        const familyIndex = Math.floor(Math.random() * allFamilies.length);
+        family = allFamilies[familyIndex];
+        if (family.members.length > 0) {
+          member = Utils.randomChoice(family.members);
+        } else {
+          // Unique families have no members, use family name as job
+          member = family.name;
+        }
       }
       
       families.push(family);
       characters.push({
         name: "Monster " + (i + 1),
         baseJob: member,
-        members: family.members.slice(),
+        members: family.members.length > 0 ? family.members.slice() : [],
         family: family.name,
         familyName: familyName || null,
         note: ""
@@ -915,19 +1028,17 @@ const Renderer = {
 
     // Run Rules section
     const hasShopsRule = shops === "Items Only" || shops === "Strict";
-    const hasRandomBattlesRule = randomBattles === "Forbidden" || randomBattles === "Required";
+    const hasRandomBattlesRule = randomBattles === "Forbidden";
     
     if (hasShopsRule || hasRandomBattlesRule) {
       html += `<div class="results-section-title">Run Rules</div>`;
       if (shops === "Items Only") {
-        html += `<div style="margin-bottom:8px;"><strong>Shops:</strong> You cannot buy equipment from shops (except for poaches).</div>`;
+        html += `<div style="margin-bottom:8px;">You cannot buy equipment from shops (except for poaches).</div>`;
       } else if (shops === "Strict") {
-        html += `<div style="margin-bottom:8px;"><strong>Shops:</strong> You cannot buy anything from shops (except for poaches).</div>`;
+        html += `<div style="margin-bottom:8px;">You cannot buy anything from shops (except for poaches).</div>`;
       }
       if (randomBattles === "Forbidden") {
-        html += `<div style="margin-bottom:8px;"><strong>Random Battles:</strong> You must skip all random battles.</div>`;
-      } else if (randomBattles === "Required") {
-        html += `<div><strong>Random Battles:</strong> You must fight all random battles.</div>`;
+        html += `<div style="margin-bottom:8px;">You must skip all random battles.</div>`;
       }
       html += `</div>`;
     }
@@ -1003,11 +1114,14 @@ const Settings = {
     const shopsOptions = ["Normal", "Items Only", "Strict"];
     document.querySelector(`input[name="shops"][value="${Utils.randomChoice(shopsOptions)}"]`).checked = true;
     
-    const randomBattlesOptions = ["Normal", "Forbidden", "Required"];
+    const randomBattlesOptions = ["Normal", "Forbidden"];
     document.querySelector(`input[name="randomBattles"][value="${Utils.randomChoice(randomBattlesOptions)}"]`).checked = true;
     
     const allowSecondaryOptions = ["allowed", "disallowed"];
     document.querySelector(`input[name="allowSecondary"][value="${Utils.randomChoice(allowSecondaryOptions)}"]`).checked = true;
+    
+    const uniqueCharactersOptions = ["allowed", "disallowed"];
+    document.querySelector(`input[name="uniqueCharacters"][value="${Utils.randomChoice(uniqueCharactersOptions)}"]`).checked = true;
   },
 
   reset() {
@@ -1066,16 +1180,35 @@ document.addEventListener("DOMContentLoaded", () => {
     radio.addEventListener("change", () => {
       if (radio.value === "cavalry") {
         partySizeSelect.value = "4";
+        partySizeSelect.disabled = true;
         PartyMemberUI.populate();
         if (partyMemberSettingsPanel) partyMemberSettingsPanel.style.display = "";
       } else if (radio.value === "fjf") {
         partySizeSelect.value = "5";
+        partySizeSelect.disabled = true;
         PartyMemberUI.populate();
         if (partyMemberSettingsPanel) partyMemberSettingsPanel.style.display = "none";
-      } else {
-        if (partyMemberSettingsPanel) partyMemberSettingsPanel.style.display = "";
+        // Hide Secondary Jobs and Unique Characters settings
+        const allowSecondarySetting = document.getElementById("allowSecondarySetting");
+        const uniqueCharactersSetting = document.getElementById("uniqueCharactersSetting");
+        if (allowSecondarySetting) allowSecondarySetting.style.display = "none";
+        if (uniqueCharactersSetting) uniqueCharactersSetting.style.display = "none";
+        // Update dropdowns to exclude unique characters
         const currentPartySize = Utils.getPartySize();
         for (let i = 0; i < currentPartySize; i++) {
+          PartyMemberUI.updateMemberDropdowns(i);
+        }
+      } else {
+        partySizeSelect.disabled = false;
+        if (partyMemberSettingsPanel) partyMemberSettingsPanel.style.display = "";
+        // Show Secondary Jobs and Unique Characters settings
+        const allowSecondarySetting = document.getElementById("allowSecondarySetting");
+        const uniqueCharactersSetting = document.getElementById("uniqueCharactersSetting");
+        if (allowSecondarySetting) allowSecondarySetting.style.display = "";
+        if (uniqueCharactersSetting) uniqueCharactersSetting.style.display = "";
+        const currentPartySize = Utils.getPartySize();
+        for (let i = 0; i < currentPartySize; i++) {
+          PartyMemberUI.updateMemberDropdowns(i);
           PartyMemberUI.updateSecondaryEnabledState(i);
         }
       }
@@ -1091,6 +1224,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const currentPartySize = Utils.getPartySize();
         for (let i = 0; i < currentPartySize; i++) {
           PartyMemberUI.updateSecondaryEnabledState(i);
+        }
+      } else if (radio.name === "uniqueCharacters") {
+        // Update all dropdowns when unique characters setting changes
+        const currentPartySize = Utils.getPartySize();
+        for (let i = 0; i < currentPartySize; i++) {
+          PartyMemberUI.updateMemberDropdowns(i);
         }
       }
     });
@@ -1134,17 +1273,26 @@ document.addEventListener("DOMContentLoaded", () => {
     // Manually apply mode-specific settings before dispatching event
     if (randomChallengeMode === "cavalry") {
       partySizeSelect.value = "4";
+      partySizeSelect.disabled = true;
       PartyMemberUI.populate();
       if (partyMemberSettingsPanel) partyMemberSettingsPanel.style.display = "";
     } else if (randomChallengeMode === "fjf") {
       partySizeSelect.value = "5";
+      partySizeSelect.disabled = true;
       PartyMemberUI.populate();
       if (partyMemberSettingsPanel) partyMemberSettingsPanel.style.display = "none";
+      // Hide Secondary Jobs and Unique Characters settings
+      const allowSecondarySetting = document.getElementById("allowSecondarySetting");
+      const uniqueCharactersSetting = document.getElementById("uniqueCharactersSetting");
+      if (allowSecondarySetting) allowSecondarySetting.style.display = "none";
+      if (uniqueCharactersSetting) uniqueCharactersSetting.style.display = "none";
     } else {
+      partySizeSelect.disabled = false;
       if (partyMemberSettingsPanel) partyMemberSettingsPanel.style.display = "";
-      // Update secondary enabled states for other modes
+      // Ensure dropdowns are populated for other modes
       const currentPartySize = Utils.getPartySize();
       for (let i = 0; i < currentPartySize; i++) {
+        PartyMemberUI.updateMemberDropdowns(i);
         PartyMemberUI.updateSecondaryEnabledState(i);
       }
     }

@@ -79,18 +79,25 @@
             <label class="inline">
               <input type="radio" name="randomBattles" value="Forbidden"> Forbidden
             </label>
-            <label class="inline">
-              <input type="radio" name="randomBattles" value="Required"> Required
-            </label>
           </div>
 
-          <div style="margin-top:6px;">
+          <div id="allowSecondarySetting" style="margin-top:6px;">
             <strong>Secondary Jobs:</strong>
             <label class="inline">
               <input type="radio" name="allowSecondary" value="allowed" checked> Allowed
             </label>
             <label class="inline">
               <input type="radio" name="allowSecondary" value="disallowed"> Disallowed
+            </label>
+          </div>
+
+          <div id="uniqueCharactersSetting" style="margin-top:6px;">
+            <strong>Unique Characters:</strong>
+            <label class="inline">
+              <input type="radio" name="uniqueCharacters" value="allowed" checked> Allowed
+            </label>
+            <label class="inline">
+              <input type="radio" name="uniqueCharacters" value="disallowed"> Disallowed
             </label>
           </div>
 
@@ -125,10 +132,6 @@
         <div class="panel-content small">
           <ul style="margin-top:0; padding-left:16px;">
             <li>
-              Story special characters (outside of temporary guests) are prohibited.
-            </li>
-            <li>
-              Consider keeping a save at <strong>Mandalia Plains</strong> with all jobs unlocked to quickly start new runs.
             </li>
           </ul>
         </div>
