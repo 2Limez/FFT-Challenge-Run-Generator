@@ -283,7 +283,6 @@ const PartyMemberUI = {
       if (secondaryLabel) secondaryLabel.textContent = "Secondary: ";
       secondarySelect.innerHTML = "";
       secondarySelect.appendChild(this._createOption("", ""));
-      secondarySelect.appendChild(this._createOption("none", "(none)"));
       Data.humanJobs.forEach(job => {
         secondarySelect.appendChild(this._createOption(job, job));
       });
@@ -467,14 +466,22 @@ const PartyMemberUI = {
           jobSelect.value = char.baseJob;
         }
         if (secondarySelect) {
-          if (char.secondary && char.secondary !== char.baseJob && Data.humanJobs.includes(char.secondary)) {
+          const allowSecondary = Utils.getSelectedRadio("allowSecondary");
+          const secondaryAllowed = allowSecondary === "allowed";
+          
+          if (secondaryAllowed && char.secondary && char.secondary !== char.baseJob && Data.humanJobs.includes(char.secondary)) {
             secondarySelect.value = char.secondary;
-          } else {
-            if (secondarySelect.querySelector('option[value="none"]')) {
-              secondarySelect.value = "none";
+          } else if (secondaryAllowed && (!char.secondary || char.secondary === char.baseJob || !Data.humanJobs.includes(char.secondary))) {
+            // If secondary is missing or invalid but secondary is allowed, assign a random one
+            const availableJobs = Data.humanJobs.filter(j => j !== char.baseJob);
+            if (availableJobs.length > 0) {
+              const randomSecondary = Utils.randomChoice(availableJobs);
+              secondarySelect.value = randomSecondary;
             } else {
               secondarySelect.value = "";
             }
+          } else {
+            secondarySelect.value = "";
           }
         }
       }
@@ -631,17 +638,31 @@ const CharacterGenerator = {
     const allowSecondary = Utils.getSelectedRadio("allowSecondary");
     const secondaryAllowed = allowSecondary === "allowed";
     
-    if ((characterType === "Ramza" || characterType === "Human") && secondarySelect && secondaryAllowed) {
-      const secondaryValue = secondarySelect.value;
-      if (secondaryValue === "" || secondaryValue === "none") {
-        if (baseJob && Data.humanJobs.includes(baseJob)) {
+    if ((characterType === "Ramza" || characterType === "Human") && secondaryAllowed) {
+      if (secondarySelect) {
+        const secondaryValue = secondarySelect.value;
+        if (secondaryValue === "") {
+          // Secondary jobs are always from regular human jobs (not unique characters)
+          // But if baseJob is a unique character, we can still assign a secondary
+          // Always assign a secondary when rolling (never leave empty)
           const availableJobs = Data.humanJobs.filter(j => j !== baseJob);
           if (availableJobs.length > 0) {
             secondary = Utils.randomChoice(availableJobs);
+          } else {
+            // Fallback: if somehow no jobs available, use first human job
+            secondary = Data.humanJobs[0] || null;
           }
+        } else if (secondaryValue !== "") {
+          secondary = secondaryValue;
         }
-      } else if (secondaryValue !== "") {
-        secondary = secondaryValue === "none" ? null : secondaryValue;
+      } else {
+        // If secondarySelect doesn't exist yet, still assign a secondary when rolling
+        const availableJobs = Data.humanJobs.filter(j => j !== baseJob);
+        if (availableJobs.length > 0) {
+          secondary = Utils.randomChoice(availableJobs);
+        } else {
+          secondary = Data.humanJobs[0] || null;
+        }
       }
     } else {
       secondary = null;
@@ -703,18 +724,19 @@ const SpecialModes = {
       }
       
       let secondary = null;
-      if (secondaryAllowed && secondarySelect && secondarySelect.value !== "" && 
-          secondarySelect.value !== "none") {
+      if (secondaryAllowed && secondarySelect && secondarySelect.value !== "") {
         // Only allow regular human jobs as secondary, not unique characters
         if (Data.humanJobs.includes(secondarySelect.value) && fiestaJobs.includes(secondarySelect.value)) {
           secondary = secondarySelect.value;
         }
-      } else if (secondaryAllowed && secondarySelect && 
-                 (secondarySelect.value === "" || secondarySelect.value === "none")) {
-        // Only randomize from regular human jobs for secondary
+      } else if (secondaryAllowed && secondarySelect && secondarySelect.value === "") {
+        // Only randomize from regular human jobs for secondary - always assign when rolling
         const availableSecondaryJobs = fiestaJobs.filter(j => j !== baseJob && Data.humanJobs.includes(j));
         if (availableSecondaryJobs.length > 0) {
           secondary = Utils.randomChoice(availableSecondaryJobs);
+        } else {
+          // Fallback: if somehow no jobs available, use first available fiesta job
+          secondary = fiestaJobs.find(j => j !== baseJob) || null;
         }
       }
       
@@ -756,15 +778,15 @@ const SpecialModes = {
       }
       
       let secondary = null;
-      if (secondaryAllowed && secondarySelect && secondarySelect.value !== "" && 
-          secondarySelect.value !== "none") {
-        // Only allow regular human jobs as secondary, not unique characters
+      // Secondary jobs are always from regular human jobs (not unique characters)
+      // But if baseJob is a unique character, we can still assign a secondary
+      if (secondaryAllowed && secondarySelect && secondarySelect.value !== "") {
+        // Only allow regular human jobs as secondary
         if (Data.humanJobs.includes(secondarySelect.value)) {
           secondary = secondarySelect.value;
         }
-      } else if (secondaryAllowed && secondarySelect && 
-                 (secondarySelect.value === "" || secondarySelect.value === "none")) {
-        // Only randomize from regular human jobs for secondary
+      } else if (secondaryAllowed && secondarySelect && secondarySelect.value === "") {
+        // Randomize from regular human jobs for secondary
         const availableJobs = Data.humanJobs.filter(j => j !== baseJob);
         if (availableJobs.length > 0) {
           secondary = Utils.randomChoice(availableJobs);
@@ -841,18 +863,24 @@ const SpecialModes = {
       }
       
       let secondary = null;
+      const allAvailableSecondaryJobs = (uniqueAllowed && i > 0)
+        ? [...Data.humanJobs, ...Data.uniqueCharacterJobs]
+        : Data.humanJobs;
+      
       if (secondaryAllowed && secondarySelect && secondarySelect.value !== "" && 
           secondarySelect.value !== "none") {
-        // Only allow regular human jobs as secondary, not unique characters
-        if (Data.humanJobs.includes(secondarySelect.value)) {
+        // Allow human jobs and unique character jobs as secondary (but not for Ramza)
+        if (allAvailableSecondaryJobs.includes(secondarySelect.value)) {
           secondary = secondarySelect.value;
         }
-      } else if (secondaryAllowed && secondarySelect && 
-                 (secondarySelect.value === "" || secondarySelect.value === "none")) {
-        // Only randomize from regular human jobs for secondary
-        const availableSecondaryJobs = Data.humanJobs.filter(j => j !== baseJob);
+      } else if (secondaryAllowed && secondarySelect && secondarySelect.value === "") {
+        // Randomize from available jobs (including unique characters if allowed) - always assign when rolling
+        const availableSecondaryJobs = allAvailableSecondaryJobs.filter(j => j !== baseJob);
         if (availableSecondaryJobs.length > 0) {
           secondary = Utils.randomChoice(availableSecondaryJobs);
+        } else {
+          // Fallback: if somehow no jobs available, use first human job
+          secondary = Data.humanJobs[0] || null;
         }
       }
       
@@ -884,11 +912,9 @@ const SpecialModes = {
       ramzaJob = Utils.randomChoice(Data.humanJobs);
     }
     
-    if (ramzaSecondarySelect && ramzaSecondarySelect.value !== "" && 
-        ramzaSecondarySelect.value !== "none") {
+    if (ramzaSecondarySelect && ramzaSecondarySelect.value !== "") {
       ramzaSecondary = ramzaSecondarySelect.value;
-    } else if (ramzaSecondarySelect && 
-               (ramzaSecondarySelect.value === "" || ramzaSecondarySelect.value === "none")) {
+    } else if (ramzaSecondarySelect && ramzaSecondarySelect.value === "") {
       const availableJobs = Data.humanJobs.filter(j => j !== ramzaJob);
       if (availableJobs.length > 0) {
         ramzaSecondary = Utils.randomChoice(availableJobs);
@@ -1053,9 +1079,18 @@ const RunGenerator = {
     
     // Normal mode
     const characters = [];
+    const secondaryAllowed = allowSecondary === "allowed";
+    
     for (let i = 0; i < partySize; i++) {
       const char = CharacterGenerator.getFromDropdowns(i);
       if (char && char.baseJob) {
+        // Ensure secondary is assigned for human/Ramza characters when allowed
+        if (secondaryAllowed && (char.characterType === "Ramza" || char.characterType === "Human") && !char.secondary) {
+          const availableJobs = Data.humanJobs.filter(j => j !== char.baseJob);
+          if (availableJobs.length > 0) {
+            char.secondary = Utils.randomChoice(availableJobs);
+          }
+        }
         characters.push(char);
       }
     }
@@ -1231,7 +1266,7 @@ const Settings = {
   resetPartyMembers() {
     const partySize = Utils.getPartySize();
     PartyMemberUI.clearAll(partySize);
-    RunGenerator.generate();
+    RunGenerator.generate(true);
   }
 };
 
