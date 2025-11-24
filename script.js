@@ -106,6 +106,22 @@ const PartyMemberUI = {
       this._setupRamza(i);
       this.updateSecondaryEnabledState(i);
     }
+    
+    // Add the Reroll Party button at the end
+    const buttonsDiv = document.createElement('div');
+    buttonsDiv.className = 'buttons';
+    buttonsDiv.style.marginTop = '12px';
+    const rerollButton = document.createElement('button');
+    rerollButton.className = 'btn secondary';
+    rerollButton.id = 'btnReset';
+    rerollButton.textContent = 'Reroll Party';
+    buttonsDiv.appendChild(rerollButton);
+    this.container.appendChild(buttonsDiv);
+    
+    // Re-attach the event listener (it will be set up in DOMContentLoaded, but this ensures it works)
+    rerollButton.addEventListener('click', () => {
+      Settings.resetPartyMembers();
+    });
   },
 
   _createMemberRow(i) {
