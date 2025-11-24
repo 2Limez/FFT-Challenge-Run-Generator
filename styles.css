@@ -342,7 +342,6 @@ body {
 
 .job-list li {
   list-style: square;
-  margin-left: 16px;
   margin-bottom: 4px;
   line-height: 1.6;
 }
@@ -407,8 +406,7 @@ body {
   }
   
   .member-secondary-label {
-    white-space: normal;
-    flex-shrink: 0;
+    display: none;
   }
   
   .party-member-dropdowns {
@@ -444,7 +442,7 @@ body {
   
   .title-header {
     font-size: 16px;
-    padding: 10px 12px;
+    padding-left: 40px;
   }
   
   .panel-content {
