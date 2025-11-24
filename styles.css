@@ -45,18 +45,18 @@ body {
 /* Numbers will automatically use fallback font due to unicode-range exclusion */
 
 .screen {
-  width: 1100px;
-  max-width: 100%;
-  padding: 0 20px 20px 20px;
+  width: 100%;
+  max-width: 1400px;
+  padding: 0 24px 24px 24px;
   box-sizing: border-box;
   margin: 0 auto;
 }
 
 .title-header {
   background: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.9) 20%, rgba(0, 0, 0, 0.7) 40%, rgba(0, 0, 0, 0.5) 60%, rgba(0, 0, 0, 0.3) 75%, rgba(0, 0, 0, 0.1) 90%, rgba(0, 0, 0, 0) 100%);
-  padding: 10px 24px 10px 24px;
+  padding: 14px 24px 14px 24px;
   color: #eae0cf;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: bold;
   margin: 0;
   text-align: left;
@@ -68,7 +68,7 @@ body {
 .main-panel {
   display: grid;
   grid-template-columns: 1.2fr 1.3fr;
-  gap: 12px;
+  gap: 16px;
   color: #221b11;
 }
 
@@ -76,7 +76,7 @@ body {
 .right-column {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 /* Base FFT panel */
@@ -84,7 +84,7 @@ body {
   background: linear-gradient(to bottom, var(--fft-bg-top), var(--fft-bg-bottom));
   border: 1px solid var(--fft-border);
   border-radius: 6px;
-  padding: 10px 14px;
+  padding: 14px 18px;
   box-shadow:
     0 0 0 1px var(--fft-inner) inset,
     0 6px 18px var(--fft-shadow);
@@ -99,9 +99,9 @@ body {
     var(--fft-header-bg-bottom)
   );
   border-radius: 4px 4px 0 0;
-  padding: 4px 8px;
-  margin: -10px -14px 8px -14px; /* let header touch panel edges */
-  font-size: 0.85rem;
+  padding: 6px 10px;
+  margin: -14px -18px 10px -18px; /* let header touch panel edges */
+  font-size: 1rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   border-bottom: 1px solid rgba(0,0,0,0.35);
@@ -112,7 +112,7 @@ body {
   background: linear-gradient(to bottom, var(--fft-bg-top), var(--fft-bg-bottom));
   border: 1px solid var(--fft-border);
   border-radius: 6px;
-  padding: 10px 14px;
+  padding: 14px 18px;
   box-shadow:
     0 0 0 1px var(--fft-inner) inset,
     0 6px 18px var(--fft-shadow);
@@ -126,9 +126,9 @@ body {
     var(--fft-header-bg-bottom)
   );
   border-radius: 4px 4px 0 0;
-  padding: 4px 8px;
-  margin: -10px -14px 8px -14px;
-  font-size: 0.85rem;
+  padding: 6px 10px;
+  margin: -14px -18px 10px -18px;
+  font-size: 1rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   border-bottom: 1px solid rgba(0,0,0,0.35);
@@ -138,18 +138,19 @@ body {
 }
 
 .panel-content {
-  font-size: 13px;
-  margin-top: 4px;
+  font-size: 16px;
+  margin-top: 6px;
+  line-height: 1.5;
 }
 
 /* Party Member Settings alignment */
 .party-member-row {
-  margin-bottom: 12px;
-  padding-bottom: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
   border-bottom: 1px solid rgba(174, 182, 207, 0.3);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .party-member-row:last-child {
@@ -173,17 +174,20 @@ body {
 
 .member-type-select {
   min-width: 90px;
-  padding: 2px 4px;
+  padding: 4px 6px;
+  font-size: 15px;
 }
 
 .member-job-select {
   min-width: 140px;
-  padding: 2px 4px;
+  padding: 4px 6px;
+  font-size: 15px;
 }
 
 .member-secondary-select {
   min-width: 140px;
-  padding: 2px 4px;
+  padding: 4px 6px;
+  font-size: 15px;
 }
 
 .member-secondary-container {
@@ -232,14 +236,21 @@ body {
 
 .panel-content label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   cursor: pointer;
+  line-height: 1.5;
 }
 
-.panel-content select,
+.panel-content select {
+  font-size: 15px;
+  padding: 4px 6px;
+  margin-right: 4px;
+}
+
 .panel-content input[type="checkbox"],
 .panel-content input[type="radio"] {
-  margin-right: 4px;
+  margin-right: 6px;
+  transform: scale(1.2);
 }
 
 .inline {
@@ -261,24 +272,24 @@ body {
 }
 
 .hint {
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.75;
-  margin-top: 6px;
-  line-height: 1.4;
+  margin-top: 8px;
+  line-height: 1.5;
 }
 
 .buttons {
-  margin-top: 6px;
+  margin-top: 10px;
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .btn {
-  padding: 4px 10px;
+  padding: 6px 14px;
   border: 2px solid #c0c8e0;
   background: linear-gradient(to bottom, #2f446f, #1c2741);
   color: #f4f8ff;
-  font-size: 12px;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.15em;
   cursor: pointer;
@@ -297,23 +308,23 @@ body {
 }
 
 .results-panel {
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 16px;
+  line-height: 1.6;
 }
 
 .results-section-title {
   text-transform: uppercase;
-  font-size: 11px;
+  font-size: 14px;
   letter-spacing: 0.12em;
   border-bottom: 1px solid #8a93ad;
-  margin: 6px 0 4px;
-  padding-bottom: 1px;
+  margin: 10px 0 6px;
+  padding-bottom: 2px;
 }
 
 .row {
   display: flex;
   justify-content: space-between;
-  margin: 2px 0;
+  margin: 4px 0;
 }
 
 .row .label {
@@ -325,17 +336,19 @@ body {
 }
 
 .job-list {
-  margin-left: 10px;
-  margin-top: 2px;
+  margin-left: 12px;
+  margin-top: 4px;
 }
 
 .job-list li {
   list-style: square;
-  margin-left: 12px;
+  margin-left: 16px;
+  margin-bottom: 4px;
+  line-height: 1.6;
 }
 
 .small {
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.8;
 }
 
@@ -346,14 +359,95 @@ body {
   opacity: 0.75;
 }
 
-@media (max-width: 900px) {
+/* Responsive breakpoints */
+@media (max-width: 768px) {
   .main-panel {
     grid-template-columns: 1fr;
   }
   
+  .screen {
+    padding: 16px;
+  }
   
+  .title-header {
+    font-size: 18px;
+    padding: 12px 16px;
+    margin-left: 0;
+  }
+  
+  .panel {
+    padding: 12px 14px;
+  }
+  
+  .panel-title {
+    margin: -12px -14px 8px -14px;
+    padding: 5px 8px;
+    font-size: 0.9rem;
+  }
+  
+  .panel-content {
+    font-size: 15px;
+  }
+  
+  .member-type-select,
+  .member-job-select,
+  .member-secondary-select {
+    width: 70%;
+    min-width: 70%;
+    max-width: 70%;
+    box-sizing: border-box;
+  }
+  
+  .member-secondary-container {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-sizing: border-box;
+  }
+  
+  .member-secondary-label {
+    white-space: normal;
+    flex-shrink: 0;
+  }
+  
+  .party-member-dropdowns {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  
+  .left-column .panel-content > div:not(.buttons) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .buttons {
+    flex-direction: column;
+  }
+  
+  .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
   .screen {
     padding: 12px;
+  }
+  
+  .title-header {
+    font-size: 16px;
+    padding: 10px 12px;
+  }
+  
+  .panel-content {
+    font-size: 14px;
+  }
+  
+  .panel-title {
+    font-size: 0.85rem;
   }
 }
 
