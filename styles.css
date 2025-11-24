@@ -418,9 +418,14 @@ body {
   }
   
   .left-column .panel-content > div:not(.buttons) {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
+  }
+  
+  .left-column .panel-content label {
+    margin-bottom: 0;
   }
   
   .buttons {
