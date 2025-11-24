@@ -250,7 +250,13 @@ const PartyMemberUI = {
     if (secondaryContainer) secondaryContainer.style.display = "none";
     
     // Handle blank type by defaulting to Human for non-Ramza members
-    const effectiveType = (type === "" && memberIndex > 0) ? "Human" : type;
+    // Also ensure the type is actually set if it was blank
+    let effectiveType = type;
+    if (type === "" && memberIndex > 0) {
+      effectiveType = "Human";
+      // Set the type dropdown value to ensure consistency
+      typeSelect.value = "Human";
+    }
     
     if (effectiveType === "Ramza" || effectiveType === "Human") {
       this._populateHumanJobDropdown(jobSelect, secondarySelect, secondaryContainer, secondaryLabel, memberIndex);
@@ -402,16 +408,32 @@ const PartyMemberUI = {
       let isMonster = char.characterType === "Monster";
       let family = null;
       let isUniqueFamily = false;
+      const uniqueAllowed = Utils.getSelectedRadio("uniqueCharacters") === "allowed";
       
       if (isMonster) {
         // Check regular monster families
         family = Data.monsterFamilies.find(f => f.members.includes(char.baseJob));
         if (!family) {
           // Check unique monster families (baseJob is the family name)
-          const uniqueFamily = Data.uniqueMonsterFamilies.find(f => f.name === char.baseJob);
-          if (uniqueFamily) {
-            family = uniqueFamily;
-            isUniqueFamily = true;
+          // But only if unique characters are allowed
+          if (uniqueAllowed) {
+            const uniqueFamily = Data.uniqueMonsterFamilies.find(f => f.name === char.baseJob);
+            if (uniqueFamily) {
+              family = uniqueFamily;
+              isUniqueFamily = true;
+            }
+          }
+          // If unique family found but unique characters not allowed, or no family found at all,
+          // assign a random regular family to fix the character object
+          if (!family || (isUniqueFamily && !uniqueAllowed)) {
+            if (Data.monsterFamilies.length > 0) {
+              family = Utils.randomChoice(Data.monsterFamilies);
+              isUniqueFamily = false;
+              // Update the character object to fix it
+              char.baseJob = Utils.randomChoice(family.members);
+              char.family = family.name;
+              char.familyName = null; // Clear familyName if it was set
+            }
           }
         }
       } else {
@@ -421,11 +443,27 @@ const PartyMemberUI = {
           isMonster = true;
         } else {
           // Check unique monster families (baseJob is the family name)
-          const uniqueFamily = Data.uniqueMonsterFamilies.find(f => f.name === char.baseJob);
-          if (uniqueFamily) {
-            isMonster = true;
-            family = uniqueFamily;
-            isUniqueFamily = true;
+          // But only if unique characters are allowed
+          if (uniqueAllowed) {
+            const uniqueFamily = Data.uniqueMonsterFamilies.find(f => f.name === char.baseJob);
+            if (uniqueFamily) {
+              isMonster = true;
+              family = uniqueFamily;
+              isUniqueFamily = true;
+            }
+          }
+          // If unique family found but unique characters not allowed, assign a random regular family
+          if (isUniqueFamily && !uniqueAllowed) {
+            if (Data.monsterFamilies.length > 0) {
+              family = Utils.randomChoice(Data.monsterFamilies);
+              isUniqueFamily = false;
+              isMonster = true;
+              // Update the character object to fix it
+              char.baseJob = Utils.randomChoice(family.members);
+              char.family = family.name;
+              char.familyName = null; // Clear familyName if it was set
+              char.characterType = "Monster";
+            }
           }
         }
       }
@@ -439,18 +477,73 @@ const PartyMemberUI = {
         if (isUniqueFamily) {
           // Unique families use negative indices
           const uniqueIndex = Data.uniqueMonsterFamilies.indexOf(family);
-          jobSelect.value = String(-(uniqueIndex + 1));
+          const uniqueValue = String(-(uniqueIndex + 1));
+          // Verify the value exists in dropdown before setting
+          if (jobSelect && Array.from(jobSelect.options).some(opt => opt.value === uniqueValue)) {
+            jobSelect.value = uniqueValue;
+          } else if (jobSelect) {
+            // If value doesn't exist, the dropdown might not be populated correctly
+            // Re-populate and try again
+            this.updateMemberDropdowns(i);
+            if (Array.from(jobSelect.options).some(opt => opt.value === uniqueValue)) {
+              jobSelect.value = uniqueValue;
+            }
+          }
         } else {
           const familyIndex = Data.monsterFamilies.indexOf(family);
-          jobSelect.value = String(familyIndex);
+          if (familyIndex >= 0 && familyIndex < Data.monsterFamilies.length) {
+            const familyValue = String(familyIndex);
+            // Verify the value exists in dropdown before setting
+            if (jobSelect && Array.from(jobSelect.options).some(opt => opt.value === familyValue)) {
+              jobSelect.value = familyValue;
+            } else if (jobSelect) {
+              // If value doesn't exist, the dropdown might not be populated correctly
+              // Re-populate and try again
+              this.updateMemberDropdowns(i);
+              if (Array.from(jobSelect.options).some(opt => opt.value === familyValue)) {
+                jobSelect.value = familyValue;
+              } else {
+                // Last resort: set to first available family option
+                const firstOption = jobSelect.options[1]; // Skip blank option at index 0
+                if (firstOption) {
+                  jobSelect.value = firstOption.value;
+                }
+              }
+            }
+          } else {
+            // Family index is invalid, set to first available option
+            if (jobSelect && jobSelect.options.length > 1) {
+              jobSelect.value = jobSelect.options[1].value;
+            }
+          }
         }
+        
+        // Ensure job dropdown has a value - if it's still blank, set to first available option
+        if (jobSelect && (!jobSelect.value || jobSelect.value === "")) {
+          if (jobSelect.options.length > 1) {
+            jobSelect.value = jobSelect.options[1].value; // Skip blank option at index 0
+          }
+        }
+        
         this.updateMonsterTypeDropdown(i);
         
         if (char.familyName || isUniqueFamily) {
           // Unique families have no types, so secondary should be blank
-          secondarySelect.value = "";
+          if (secondarySelect) secondarySelect.value = "";
         } else {
-          secondarySelect.value = char.baseJob;
+          // Verify the type exists in dropdown before setting
+          if (secondarySelect && Array.from(secondarySelect.options).some(opt => opt.value === char.baseJob)) {
+            secondarySelect.value = char.baseJob;
+          } else if (secondarySelect && char.baseJob) {
+            // If type doesn't exist, select first available type from the family
+            const familyIndex = parseInt(jobSelect.value, 10);
+            if (!isNaN(familyIndex) && familyIndex >= 0 && familyIndex < Data.monsterFamilies.length) {
+              const family = Data.monsterFamilies[familyIndex];
+              if (family.members.length > 0) {
+                secondarySelect.value = family.members[0];
+              }
+            }
+          }
         }
       } else {
         // Not a monster, treat as human/Ramza
@@ -461,22 +554,60 @@ const PartyMemberUI = {
         if (i > 0) typeSelect.removeAttribute('disabled');
         
         // Only set job if it's a valid human job or unique character job
-        if (jobSelect && (Data.humanJobs.includes(char.baseJob) || 
-            (i > 0 && Data.uniqueCharacterJobs.includes(char.baseJob)))) {
-          jobSelect.value = char.baseJob;
+        // Also verify the job exists in the dropdown options before setting
+        if (jobSelect) {
+          const jobExists = Array.from(jobSelect.options).some(opt => opt.value === char.baseJob);
+          if (jobExists && (Data.humanJobs.includes(char.baseJob) || 
+              (i > 0 && Data.uniqueCharacterJobs.includes(char.baseJob)))) {
+            jobSelect.value = char.baseJob;
+          } else if (!jobExists && char.baseJob) {
+            // If job doesn't exist in dropdown but we have a baseJob, 
+            // it might be because unique characters aren't allowed - assign a random valid job
+            const availableJobs = Data.humanJobs;
+            if (availableJobs.length > 0) {
+              const randomJob = Utils.randomChoice(availableJobs);
+              if (Array.from(jobSelect.options).some(opt => opt.value === randomJob)) {
+                jobSelect.value = randomJob;
+              }
+            }
+          }
         }
         if (secondarySelect) {
           const allowSecondary = Utils.getSelectedRadio("allowSecondary");
           const secondaryAllowed = allowSecondary === "allowed";
           
           if (secondaryAllowed && char.secondary && char.secondary !== char.baseJob && Data.humanJobs.includes(char.secondary)) {
-            secondarySelect.value = char.secondary;
+            // Verify the secondary exists in dropdown before setting
+            if (Array.from(secondarySelect.options).some(opt => opt.value === char.secondary)) {
+              secondarySelect.value = char.secondary;
+            } else {
+              // If secondary doesn't exist in dropdown, assign a random valid one
+              const availableJobs = Data.humanJobs.filter(j => j !== char.baseJob);
+              if (availableJobs.length > 0) {
+                const validJobs = availableJobs.filter(j => 
+                  Array.from(secondarySelect.options).some(opt => opt.value === j)
+                );
+                if (validJobs.length > 0) {
+                  secondarySelect.value = Utils.randomChoice(validJobs);
+                } else {
+                  secondarySelect.value = "";
+                }
+              } else {
+                secondarySelect.value = "";
+              }
+            }
           } else if (secondaryAllowed && (!char.secondary || char.secondary === char.baseJob || !Data.humanJobs.includes(char.secondary))) {
             // If secondary is missing or invalid but secondary is allowed, assign a random one
             const availableJobs = Data.humanJobs.filter(j => j !== char.baseJob);
             if (availableJobs.length > 0) {
-              const randomSecondary = Utils.randomChoice(availableJobs);
-              secondarySelect.value = randomSecondary;
+              const validJobs = availableJobs.filter(j => 
+                Array.from(secondarySelect.options).some(opt => opt.value === j)
+              );
+              if (validJobs.length > 0) {
+                secondarySelect.value = Utils.randomChoice(validJobs);
+              } else {
+                secondarySelect.value = "";
+              }
             } else {
               secondarySelect.value = "";
             }
@@ -500,11 +631,19 @@ const PartyMemberUI = {
         if (jobSelect) jobSelect.value = "";
         if (secondarySelect) secondarySelect.value = "";
         this.updateMemberDropdowns(i);
+        // Ensure Ramza dropdowns are populated
+        this._setupRamza(i);
       } else {
         if (typeSelect) typeSelect.value = "";
         if (jobSelect) jobSelect.value = "";
         if (secondarySelect) secondarySelect.value = "";
+        // updateMemberDropdowns will default blank type to "Human" and populate dropdowns
         this.updateMemberDropdowns(i);
+        // Ensure type is actually set if it was blank (updateMemberDropdowns should handle this, but double-check)
+        if (typeSelect && typeSelect.value === "") {
+          typeSelect.value = "Human";
+          this.updateMemberDropdowns(i);
+        }
       }
     }
   }
@@ -943,8 +1082,8 @@ const SpecialModes = {
       
       if (jobSelect && jobSelect.value !== "") {
         const selectedFamilyIndex = parseInt(jobSelect.value, 10);
-        // Handle unique monster families (negative indices)
-        if (!isNaN(selectedFamilyIndex) && selectedFamilyIndex < 0) {
+        // Handle unique monster families (negative indices) - but only if unique characters are allowed
+        if (!isNaN(selectedFamilyIndex) && selectedFamilyIndex < 0 && uniqueAllowed) {
           const uniqueIndex = Math.abs(selectedFamilyIndex) - 1;
           if (uniqueIndex >= 0 && uniqueIndex < Data.uniqueMonsterFamilies.length) {
             family = Data.uniqueMonsterFamilies[uniqueIndex];
@@ -964,6 +1103,10 @@ const SpecialModes = {
               familyName = family.name;
             }
           }
+        } else if (!isNaN(selectedFamilyIndex) && selectedFamilyIndex < 0 && !uniqueAllowed) {
+          // Invalid: negative index but unique characters not allowed - ignore and randomize
+          // This shouldn't happen if dropdowns are correct, but handle it gracefully
+          // Don't set family, let it fall through to randomization below
         }
       }
       
@@ -979,12 +1122,25 @@ const SpecialModes = {
       }
       
       families.push(family);
+      
+      // Only set familyName if the type dropdown was blank (meaning show family name in summary)
+      // But don't set it for unique families when unique characters are disallowed
+      let finalFamilyName = null;
+      if (familyName) {
+        // Check if this is a unique family
+        const isUniqueFamily = Data.uniqueMonsterFamilies.some(uf => uf.name === family.name);
+        if (!isUniqueFamily || uniqueAllowed) {
+          finalFamilyName = familyName;
+        }
+      }
+      
       characters.push({
         name: "Monster " + (i + 1),
         baseJob: member,
         members: family.members.length > 0 ? family.members.slice() : [],
         family: family.name,
-        familyName: familyName || null,
+        familyName: finalFamilyName,
+        characterType: "Monster",
         note: ""
       });
     }
