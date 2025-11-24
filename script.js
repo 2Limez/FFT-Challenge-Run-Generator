@@ -265,16 +265,17 @@ const PartyMemberUI = {
     jobSelect.style.display = "none";
     if (secondaryContainer) secondaryContainer.style.display = "none";
     
-    // Handle blank type by defaulting to Human for non-Ramza members
-    // Also ensure the type is actually set if it was blank
+    // Handle blank type - don't set it automatically, let getFromDropdowns randomize it
+    // But we need to populate dropdowns for display purposes
     let effectiveType = type;
     if (type === "" && memberIndex > 0) {
+      // For blank types, populate both human and monster dropdowns aren't shown
+      // We'll default to showing human dropdowns, but getFromDropdowns will randomize
       effectiveType = "Human";
-      // Set the type dropdown value to ensure consistency
-      typeSelect.value = "Human";
+      // Don't set typeSelect.value here - let it stay blank so getFromDropdowns can randomize
     }
     
-    if (effectiveType === "Ramza" || effectiveType === "Human") {
+    if (effectiveType === "Ramza" || effectiveType === "Human" || (type === "" && memberIndex > 0)) {
       this._populateHumanJobDropdown(jobSelect, secondarySelect, secondaryContainer, secondaryLabel, memberIndex);
     } else if (effectiveType === "Monster") {
       this._populateMonsterJobDropdown(jobSelect, secondarySelect, secondaryContainer, secondaryLabel, memberIndex);
@@ -566,6 +567,24 @@ const PartyMemberUI = {
         if (i > 0) typeSelect.removeAttribute('disabled');
         const charType = char.characterType || (i === 0 ? "Ramza" : "Human");
         typeSelect.value = charType;
+        
+        // Check if character has a unique character job but unique characters are not allowed
+        // If so, replace it with a regular human job
+        if (char.baseJob && Data.uniqueCharacterJobs.includes(char.baseJob) && !uniqueAllowed) {
+          if (Data.humanJobs.length > 0) {
+            char.baseJob = Utils.randomChoice(Data.humanJobs);
+            // Also update secondary if it's a unique character job
+            if (char.secondary && Data.uniqueCharacterJobs.includes(char.secondary)) {
+              const availableJobs = Data.humanJobs.filter(j => j !== char.baseJob);
+              if (availableJobs.length > 0) {
+                char.secondary = Utils.randomChoice(availableJobs);
+              } else {
+                char.secondary = null;
+              }
+            }
+          }
+        }
+        
         this.updateMemberDropdowns(i);
         if (i > 0) typeSelect.removeAttribute('disabled');
         
@@ -574,7 +593,7 @@ const PartyMemberUI = {
         if (jobSelect) {
           const jobExists = Array.from(jobSelect.options).some(opt => opt.value === char.baseJob);
           if (jobExists && (Data.humanJobs.includes(char.baseJob) || 
-              (i > 0 && Data.uniqueCharacterJobs.includes(char.baseJob)))) {
+              (i > 0 && uniqueAllowed && Data.uniqueCharacterJobs.includes(char.baseJob)))) {
             jobSelect.value = char.baseJob;
           } else if (!jobExists && char.baseJob) {
             // If job doesn't exist in dropdown but we have a baseJob, 
@@ -584,6 +603,8 @@ const PartyMemberUI = {
               const randomJob = Utils.randomChoice(availableJobs);
               if (Array.from(jobSelect.options).some(opt => opt.value === randomJob)) {
                 jobSelect.value = randomJob;
+                // Update the character object to match
+                char.baseJob = randomJob;
               }
             }
           }
@@ -653,13 +674,9 @@ const PartyMemberUI = {
         if (typeSelect) typeSelect.value = "";
         if (jobSelect) jobSelect.value = "";
         if (secondarySelect) secondarySelect.value = "";
-        // updateMemberDropdowns will default blank type to "Human" and populate dropdowns
+        // updateMemberDropdowns will populate dropdowns but leave type blank for randomization
         this.updateMemberDropdowns(i);
-        // Ensure type is actually set if it was blank (updateMemberDropdowns should handle this, but double-check)
-        if (typeSelect && typeSelect.value === "") {
-          typeSelect.value = "Human";
-          this.updateMemberDropdowns(i);
-        }
+        // Don't set type to "Human" - let it stay blank so getFromDropdowns can randomize
       }
     }
   }
