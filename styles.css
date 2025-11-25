@@ -461,3 +461,55 @@ body {
   }
 }
 
+/* ====== Link Styling ====== */
+a {
+  color: #4a6fa5;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: #2d4a6f;
+  text-decoration: underline;
+}
+
+a:visited {
+  color: #6b4a8f;
+}
+
+a:visited:hover {
+  color: #4d2d6f;
+}
+
+/* Links List */
+.links-list {
+  margin-top: 4px;
+  padding-left: 20px;
+  list-style-type: disc;
+}
+
+.links-list li {
+  margin-bottom: 8px;
+}
+
+.links-list a {
+  font-size: 1.05em;
+  font-weight: bold;
+  color: #4a6fa5;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.links-list a:hover {
+  color: #2d4a6f;
+  text-decoration: underline;
+}
+
+.links-list a:visited {
+  color: #6b4a8f;
+}
+
+.links-list a:visited:hover {
+  color: #4d2d6f;
+}
+
